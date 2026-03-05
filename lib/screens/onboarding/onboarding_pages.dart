@@ -4,7 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:zeno/theme/app_theme.dart';
-import 'package:zeno/widgets/mochi_widget.dart';
+import 'package:zeno/widgets/mochi_lottie_widget.dart';
 
 // ─── Shared helpers ────────────────────────────────────────────────────────────
 
@@ -132,7 +132,7 @@ class _WelcomePageState extends State<WelcomePage>
                               color: AppTheme.selectedGreen.withValues(alpha: 0.10),
                               shape: BoxShape.circle,
                             ),
-                            child: const Center(child: MochiWidget(size: 140)),
+                            child: const Center(child: MochiLottieWidget(size: 140)),
                           ),
                           const SizedBox(height: 32),
                           Text(
@@ -260,7 +260,7 @@ class _NameEntryPageState extends State<NameEntryPage> {
                           color: AppTheme.selectedGreen.withValues(alpha: 0.10),
                           shape: BoxShape.circle,
                         ),
-                        child: const Center(child: MochiWidget(size: 56)),
+                        child: const Center(child: MochiLottieWidget(size: 56)),
                       ),
                     ],
                   ),
@@ -972,7 +972,7 @@ class _MeetMochiPageState extends State<MeetMochiPage>
                                     ),
                                   ),
                                 ),
-                                const MochiWidget(size: 190, showCrown: true),
+                                const MochiLottieWidget(size: 190, showCrown: true),
                                 if (_tapCount == 0 && _showContent)
                                   Positioned(
                                     bottom: 18,

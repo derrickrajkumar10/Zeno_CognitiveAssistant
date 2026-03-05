@@ -7,7 +7,7 @@ import 'package:zeno/mock_data.dart';
 import 'package:zeno/providers/app_state_provider.dart';
 import 'package:zeno/services/ollama_service.dart';
 import 'package:zeno/theme/app_theme.dart';
-import 'package:zeno/widgets/mochi_widget.dart';
+import 'package:zeno/widgets/mochi_lottie_widget.dart';
 
 class ScanScreen extends ConsumerStatefulWidget {
   const ScanScreen({super.key});
@@ -221,7 +221,7 @@ class _ScanScreenState extends ConsumerState<ScanScreen> {
                                   child: Align(
                                     alignment: Alignment.topCenter,
                                     heightFactor: 0.4,
-                                    child: MochiWidget(size: 100),
+                                    child: MochiLottieWidget(size: 100),
                                   ),
                                 ),
                               ),

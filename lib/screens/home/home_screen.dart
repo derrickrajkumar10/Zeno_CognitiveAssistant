@@ -5,7 +5,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:zeno/providers/app_state_provider.dart';
 import 'package:zeno/theme/app_theme.dart';
 import 'package:zeno/widgets/mochi_dialogue_bubble.dart';
-import 'package:zeno/widgets/mochi_widget.dart';
+import 'package:zeno/widgets/mochi_lottie_widget.dart';
 import 'package:zeno/widgets/particle_overlay.dart';
 
 class HomeScreen extends ConsumerWidget {
@@ -99,7 +99,7 @@ class HomeScreen extends ConsumerWidget {
                               child: MochiDialogueBubble(),
                             ),
                             SizedBox(height: 12),
-                            MochiWidget(size: 220),
+                            MochiLottieWidget(size: 220),
                           ],
                         ),
                       ),
