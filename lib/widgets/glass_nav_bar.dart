@@ -23,6 +23,7 @@ class GlassNavBar extends StatelessWidget {
   static const _items = [
     _NavItem(icon: Icons.home_rounded, label: 'Home'),
     _NavItem(icon: Icons.auto_awesome_rounded, label: 'Quests'),
+    _NavItem(icon: Icons.sports_esports_rounded, label: 'Playroom'),
     _NavItem(icon: Icons.favorite_rounded, label: 'Scan'),
     _NavItem(icon: Icons.insights_rounded, label: 'Insights'),
     _NavItem(icon: Icons.person_rounded, label: 'Profile'),

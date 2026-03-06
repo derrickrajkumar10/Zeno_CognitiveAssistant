@@ -45,6 +45,8 @@ class MockData {
     Quest(id: 'walk',       title: 'Micro Walk',      icon: '🚶', xpReward: 50, duration: '5 min',  description: 'Outside. Moving. No podcasts.'),
     Quest(id: 'hydration',  title: 'Hydration Quest', icon: '💧', xpReward: 20, duration: 'Now',    description: 'Drink a full glass of water right now.'),
     Quest(id: 'posture',    title: 'Posture Check',   icon: '🧘', xpReward: 25, duration: '1 min',  description: 'Shoulders back. Chin level. Breathe.'),
+    Quest(id: 'focus_quest',  title: 'Focus Quest',   icon: '👁', xpReward: 45, duration: '2 min',  description: 'Play Focus Flicker to sharpen your attention.'),
+    Quest(id: 'memory_quest', title: 'Memory Quest',  icon: '🌸', xpReward: 35, duration: '2 min',  description: 'Play Memory Garden to exercise your recall.'),
   ];
 
   // ─── MOCHI DIALOGUE — THRIVING (score 80–100) ───────────────────

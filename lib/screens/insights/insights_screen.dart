@@ -2,6 +2,7 @@ import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:zeno/models/face_scan_entry.dart';
 import 'package:zeno/providers/app_state_provider.dart';
 import 'package:zeno/providers/mochi_personality_provider.dart';
 import 'package:zeno/theme/app_theme.dart';
@@ -14,20 +15,22 @@ class InsightsScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final state = ref.watch(appStateProvider);
     final readings = state.weekReadings;
+    final latestFaceScan = state.latestFaceScan;
     final personality = ref.watch(mochiPersonalityProvider);
     final pad = MediaQuery.of(context).padding;
 
-    // Compute dynamic stats
     final avgScore = readings.isEmpty
         ? 0.0
-        : readings.map((r) => r.score).reduce((a, b) => a + b) /
+        : readings.map((reading) => reading.score).reduce((a, b) => a + b) /
             readings.length;
     final bestDay = readings.isEmpty
         ? null
         : readings.reduce((a, b) => a.score > b.score ? a : b);
     final avgStress = readings.isEmpty
         ? 0.0
-        : readings.map((r) => r.stressIndex).reduce((a, b) => a + b) /
+        : readings
+                .map((reading) => reading.stressIndex)
+                .reduce((a, b) => a + b) /
             readings.length;
 
     return SingleChildScrollView(
@@ -49,10 +52,7 @@ class InsightsScreen extends ConsumerWidget {
             'Your 7-day wellness overview',
             style: AppTheme.bodySmall,
           ).animate().fadeIn(duration: 500.ms, delay: 100.ms),
-
           const SizedBox(height: AppTheme.lg),
-
-          // ── Weekly chart ─────────────────────────────────────────
           GlassCard(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -67,7 +67,7 @@ class InsightsScreen extends ConsumerWidget {
                         show: true,
                         drawVerticalLine: false,
                         horizontalInterval: 20,
-                        getDrawingHorizontalLine: (value) => FlLine(
+                        getDrawingHorizontalLine: (value) => const FlLine(
                           color: AppTheme.surfaceBorder,
                           strokeWidth: 0.5,
                         ),
@@ -90,12 +90,12 @@ class InsightsScreen extends ConsumerWidget {
                             interval: 1,
                             getTitlesWidget: (value, meta) {
                               final days = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
-                              final idx = value.toInt();
-                              if (idx >= 0 && idx < days.length) {
+                              final index = value.toInt();
+                              if (index >= 0 && index < days.length) {
                                 return Padding(
                                   padding: const EdgeInsets.only(top: 6),
                                   child: Text(
-                                    days[idx],
+                                    days[index],
                                     style: AppTheme.labelSmall,
                                   ),
                                 );
@@ -104,10 +104,10 @@ class InsightsScreen extends ConsumerWidget {
                             },
                           ),
                         ),
-                        topTitles: const AxisTitles(
-                            sideTitles: SideTitles(showTitles: false)),
-                        rightTitles: const AxisTitles(
-                            sideTitles: SideTitles(showTitles: false)),
+                        topTitles:
+                            const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                        rightTitles:
+                            const AxisTitles(sideTitles: SideTitles(showTitles: false)),
                       ),
                       borderData: FlBorderData(show: false),
                       minX: 0,
@@ -117,9 +117,12 @@ class InsightsScreen extends ConsumerWidget {
                       lineBarsData: [
                         LineChartBarData(
                           spots: List.generate(
-                              readings.length,
-                              (i) => FlSpot(
-                                  i.toDouble(), readings[i].score.toDouble())),
+                            readings.length,
+                            (index) => FlSpot(
+                              index.toDouble(),
+                              readings[index].score.toDouble(),
+                            ),
+                          ),
                           isCurved: true,
                           curveSmoothness: 0.3,
                           color: AppTheme.primaryLight,
@@ -141,8 +144,8 @@ class InsightsScreen extends ConsumerWidget {
                               begin: Alignment.topCenter,
                               end: Alignment.bottomCenter,
                               colors: [
-                                AppTheme.primaryLight.withOpacity(0.2),
-                                AppTheme.primaryLight.withOpacity(0.0),
+                                AppTheme.primaryLight.withValues(alpha: 0.2),
+                                AppTheme.primaryLight.withValues(alpha: 0.0),
                               ],
                             ),
                           ),
@@ -157,10 +160,7 @@ class InsightsScreen extends ConsumerWidget {
               .animate()
               .fadeIn(duration: 600.ms, delay: 200.ms)
               .slideY(begin: 0.05),
-
           const SizedBox(height: AppTheme.md),
-
-          // ── Stats grid ──────────────────────────────────────────
           Row(
             children: [
               Expanded(
@@ -194,12 +194,19 @@ class InsightsScreen extends ConsumerWidget {
               .animate()
               .fadeIn(duration: 500.ms, delay: 350.ms)
               .slideY(begin: 0.05),
-
           const SizedBox(height: AppTheme.lg),
-
-          // ── Mochi weekly summary ────────────────────────────────
+          if (latestFaceScan != null) ...[
+            GlassCard(
+              tint: AppTheme.accentSoft.withValues(alpha: 0.45),
+              child: _LatestFaceScanCard(scan: latestFaceScan),
+            )
+                .animate()
+                .fadeIn(duration: 500.ms, delay: 430.ms)
+                .slideY(begin: 0.05),
+            const SizedBox(height: AppTheme.lg),
+          ],
           GlassCard(
-            tint: AppTheme.primarySoft.withOpacity(0.3),
+            tint: AppTheme.primarySoft.withValues(alpha: 0.3),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -209,12 +216,15 @@ class InsightsScreen extends ConsumerWidget {
                       width: 28,
                       height: 28,
                       decoration: BoxDecoration(
-                        color: AppTheme.primaryLight.withOpacity(0.15),
+                        color: AppTheme.primaryLight.withValues(alpha: 0.15),
                         borderRadius: BorderRadius.circular(8),
                       ),
                       alignment: Alignment.center,
-                      child: const Icon(Icons.pets_rounded,
-                          size: 16, color: AppTheme.primaryLight),
+                      child: const Icon(
+                        Icons.pets_rounded,
+                        size: 16,
+                        color: AppTheme.primaryLight,
+                      ),
                     ),
                     const SizedBox(width: 8),
                     Text('Mochi\'s Take', style: AppTheme.headlineMed),
@@ -247,6 +257,58 @@ class InsightsScreen extends ConsumerWidget {
     } else {
       return 'This week was heavier than usual, ${personality.userName}. Your CogniPulse averaged ${avgScore.toStringAsFixed(0)}. Mochi sees you showing up though, and that matters.';
     }
+  }
+}
+
+class _LatestFaceScanCard extends StatelessWidget {
+  final FaceScanEntry scan;
+
+  const _LatestFaceScanCard({required this.scan});
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text('Latest Face Check-In', style: AppTheme.headlineMed),
+        const SizedBox(height: AppTheme.sm),
+        Row(
+          children: [
+            Expanded(
+              child: _StatCard(
+                label: 'Smile',
+                value: '${(scan.smileProbability * 100).round()}%',
+                icon: Icons.sentiment_satisfied_alt_rounded,
+                color: AppTheme.accent,
+              ),
+            ),
+            const SizedBox(width: AppTheme.sm),
+            Expanded(
+              child: _StatCard(
+                label: 'Eyes Open',
+                value: '${(scan.eyeOpenAverage * 100).round()}%',
+                icon: Icons.visibility_rounded,
+                color: AppTheme.primaryLight,
+              ),
+            ),
+            const SizedBox(width: AppTheme.sm),
+            Expanded(
+              child: _StatCard(
+                label: 'Coverage',
+                value: '${(scan.faceCoverage * 100).round()}%',
+                icon: Icons.center_focus_strong_rounded,
+                color: AppTheme.info,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: AppTheme.sm),
+        Text(
+          scan.mochiInsight,
+          style: AppTheme.bodyMedium.copyWith(color: AppTheme.textSecondary),
+        ),
+      ],
+    );
   }
 }
 

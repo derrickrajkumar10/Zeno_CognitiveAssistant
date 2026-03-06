@@ -1,33 +1,30 @@
 import 'dart:ui';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:zeno/providers/app_state_provider.dart';
 import 'package:zeno/providers/mochi_personality_provider.dart';
 import 'package:zeno/services/ollama_service.dart';
 import 'package:zeno/theme/app_theme.dart';
 
-/// Premium glassmorphism speech bubble with typing indicator and typewriter effect.
 class MochiDialogueBubble extends ConsumerStatefulWidget {
   const MochiDialogueBubble({super.key});
 
   @override
-  ConsumerState<MochiDialogueBubble> createState() =>
-      _MochiDialogueBubbleState();
+  ConsumerState<MochiDialogueBubble> createState() => _MochiDialogueBubbleState();
 }
 
-class _MochiDialogueBubbleState extends ConsumerState<MochiDialogueBubble>
-    with SingleTickerProviderStateMixin {
+class _MochiDialogueBubbleState extends ConsumerState<MochiDialogueBubble> {
   String _displayedText = '';
   String _targetText = '';
   bool _isTyping = false;
-
-  @override
-  void initState() {
-    super.initState();
-  }
+  int _lastDialogueCycle = -1;
 
   void _startTypewriter(String text) {
-    if (text == _targetText) return;
+    if (text == _targetText) {
+      return;
+    }
     _targetText = text;
     _isTyping = true;
     _displayedText = '';
@@ -36,7 +33,9 @@ class _MochiDialogueBubbleState extends ConsumerState<MochiDialogueBubble>
 
   void _typeNextChar(int index) {
     if (!mounted || index >= _targetText.length) {
-      if (mounted) setState(() => _isTyping = false);
+      if (mounted) {
+        setState(() => _isTyping = false);
+      }
       return;
     }
     setState(() {
@@ -47,12 +46,42 @@ class _MochiDialogueBubbleState extends ConsumerState<MochiDialogueBubble>
     });
   }
 
+  Future<void> _refreshDialogue() async {
+    ref.read(mochiLoadingProvider.notifier).state = true;
+    final appState = ref.read(appStateProvider);
+    final mood = ref.read(mochiMoodProvider);
+    final service = ref.read(ollamaServiceProvider);
+
+    final line = await service.getMochiDialogue(
+      cogniPulseScore: appState.cogniPulseScore,
+      moodState: mood,
+      setOllamaStatus: ref.read(appStateProvider.notifier).setOllamaStatus,
+    );
+
+    if (!mounted) {
+      return;
+    }
+
+    ref.read(mochiDialogueProvider.notifier).state = line;
+    ref.read(mochiLoadingProvider.notifier).state = false;
+  }
+
   @override
   Widget build(BuildContext context) {
-    final line = ref.watch(mochiCurrentDialogueProvider);
     final loading = ref.watch(mochiLoadingProvider);
+    final fallbackLine = ref.watch(mochiCurrentDialogueProvider);
+    final currentLine = ref.watch(mochiDialogueProvider);
+    final line = currentLine.isEmpty ? fallbackLine : currentLine;
+    final dialogueCycle =
+        ref.watch(appStateProvider.select((state) => state.dialogueCycleCount));
 
-    // Trigger typewriter when dialogue changes
+    if (_lastDialogueCycle != dialogueCycle) {
+      _lastDialogueCycle = dialogueCycle;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _refreshDialogue();
+      });
+    }
+
     if (!loading && line != _targetText) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         _startTypewriter(line);
@@ -74,8 +103,8 @@ class _MochiDialogueBubbleState extends ConsumerState<MochiDialogueBubble>
           filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
           child: AnimatedSwitcher(
             duration: 400.ms,
-            transitionBuilder: (child, anim) => FadeTransition(
-              opacity: anim,
+            transitionBuilder: (child, animation) => FadeTransition(
+              opacity: animation,
               child: child,
             ),
             child: Container(
@@ -112,7 +141,6 @@ class _MochiDialogueBubbleState extends ConsumerState<MochiDialogueBubble>
   }
 }
 
-/// iMessage-style bouncing dots typing indicator
 class _TypingIndicator extends StatelessWidget {
   const _TypingIndicator();
 
@@ -120,10 +148,10 @@ class _TypingIndicator extends StatelessWidget {
   Widget build(BuildContext context) {
     return Row(
       mainAxisSize: MainAxisSize.min,
-      children: List.generate(3, (i) {
+      children: List.generate(3, (index) {
         return Padding(
-          padding: EdgeInsets.only(right: i < 2 ? 4 : 0),
-          child: _BouncingDot(delay: i * 200),
+          padding: EdgeInsets.only(right: index < 2 ? 4 : 0),
+          child: _BouncingDot(delay: index * 200),
         );
       }),
     );
@@ -132,46 +160,48 @@ class _TypingIndicator extends StatelessWidget {
 
 class _BouncingDot extends StatefulWidget {
   final int delay;
+
   const _BouncingDot({required this.delay});
 
   @override
   State<_BouncingDot> createState() => _BouncingDotState();
 }
 
-class _BouncingDotState extends State<_BouncingDot>
-    with SingleTickerProviderStateMixin {
-  late final AnimationController _ctrl;
-  late final Animation<double> _anim;
+class _BouncingDotState extends State<_BouncingDot> with SingleTickerProviderStateMixin {
+  late final AnimationController _controller;
+  late final Animation<double> _animation;
 
   @override
   void initState() {
     super.initState();
-    _ctrl = AnimationController(
+    _controller = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 600),
     );
-    _anim = Tween<double>(begin: 0, end: -6).animate(
-      CurvedAnimation(parent: _ctrl, curve: Curves.easeInOut),
+    _animation = Tween<double>(begin: 0, end: -6).animate(
+      CurvedAnimation(parent: _controller, curve: Curves.easeInOut),
     );
 
     Future.delayed(Duration(milliseconds: widget.delay), () {
-      if (mounted) _ctrl.repeat(reverse: true);
+      if (mounted) {
+        _controller.repeat(reverse: true);
+      }
     });
   }
 
   @override
   void dispose() {
-    _ctrl.dispose();
+    _controller.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     return AnimatedBuilder(
-      animation: _anim,
+      animation: _animation,
       builder: (_, child) {
         return Transform.translate(
-          offset: Offset(0, _anim.value),
+          offset: Offset(0, _animation.value),
           child: child,
         );
       },
@@ -180,7 +210,7 @@ class _BouncingDotState extends State<_BouncingDot>
         height: 7,
         decoration: BoxDecoration(
           shape: BoxShape.circle,
-          color: AppTheme.textTertiary.withOpacity(0.6),
+          color: AppTheme.textTertiary.withValues(alpha: 0.6),
         ),
       ),
     );

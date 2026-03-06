@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:zeno/mock_data.dart';
+import 'package:go_router/go_router.dart';
 import 'package:zeno/models/mochi_state.dart';
 import 'package:zeno/providers/app_state_provider.dart';
 import 'package:zeno/providers/mochi_personality_provider.dart';
@@ -10,6 +11,10 @@ import 'package:zeno/widgets/glass_card.dart';
 import 'package:zeno/widgets/mochi_dialogue_bubble.dart';
 import 'package:zeno/widgets/mochi_widget.dart';
 import 'package:zeno/widgets/particle_overlay.dart';
+import 'package:zeno/screens/games/wave_sync_game.dart';
+import 'package:zeno/screens/games/focus_flicker_game.dart';
+import 'package:zeno/screens/games/memory_garden_game.dart';
+import 'package:zeno/screens/games/bubble_drift_game.dart';
 
 class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key});
@@ -44,7 +49,7 @@ class HomeScreen extends ConsumerWidget {
             children: [
               // ── Greeting ────────────────────────────────────────────
               Text(
-                _greeting() + ',',
+                '${_greeting()},',
                 style:
                     AppTheme.bodyLarge.copyWith(color: AppTheme.textSecondary),
               ).animate().fadeIn(duration: 500.ms).slideY(begin: -0.1),
@@ -132,13 +137,13 @@ class HomeScreen extends ConsumerWidget {
                                 ),
                               ),
                               const SizedBox(width: 8),
-                              _DeltaChip(delta: MockData.scoreDelta),
+                              _DeltaChip(delta: state.scoreDelta),
                             ],
                           ),
                         ],
                       ),
                     ),
-                    Icon(
+                    const Icon(
                       Icons.chevron_right_rounded,
                       color: AppTheme.textTertiary,
                     ),
@@ -159,7 +164,7 @@ class HomeScreen extends ConsumerWidget {
                       icon: Icons.favorite_rounded,
                       label: 'Start Scan',
                       color: AppTheme.accent,
-                      onTap: () {},
+                      onTap: () => context.go('/scan'),
                     ),
                   ),
                   const SizedBox(width: AppTheme.md),
@@ -180,20 +185,29 @@ class HomeScreen extends ConsumerWidget {
               const SizedBox(height: AppTheme.lg),
 
               // ── Streak banner ───────────────────────────────────────
+              // ── Mochi game suggestion ────────────────────────────
+              _MochiGameSuggestion(
+                score: score,
+                stressIndex: state.weekReadings.last.stressIndex / 100,
+                focusScore: state.weekReadings.last.focusLevel / 100,
+                moodScore: state.weekReadings.last.moodScore / 100,
+              ),
+              const SizedBox(height: AppTheme.md),
+
               if (state.user.currentStreak > 0)
                 GlassCard(
-                  tint: AppTheme.primarySoft.withOpacity(0.5),
+                  tint: AppTheme.primarySoft.withValues(alpha: 0.5),
                   child: Row(
                     children: [
                       Container(
                         width: 44,
                         height: 44,
                         decoration: BoxDecoration(
-                          color: AppTheme.primaryLight.withOpacity(0.15),
+                          color: AppTheme.primaryLight.withValues(alpha: 0.15),
                           borderRadius: BorderRadius.circular(12),
                         ),
                         alignment: Alignment.center,
-                        child: Text('🔥', style: TextStyle(fontSize: 22)),
+                        child: const Text('🔥', style: TextStyle(fontSize: 22)),
                       ),
                       const SizedBox(width: AppTheme.md),
                       Expanded(
@@ -247,7 +261,8 @@ class _DeltaChip extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
       decoration: BoxDecoration(
-        color: (positive ? AppTheme.success : AppTheme.error).withOpacity(0.12),
+        color: (positive ? AppTheme.success : AppTheme.error)
+            .withValues(alpha: 0.12),
         borderRadius: BorderRadius.circular(8),
       ),
       child: Row(
@@ -296,7 +311,7 @@ class _QuickAction extends StatelessWidget {
             width: 40,
             height: 40,
             decoration: BoxDecoration(
-              color: color.withOpacity(0.12),
+              color: color.withValues(alpha: 0.12),
               borderRadius: BorderRadius.circular(12),
             ),
             alignment: Alignment.center,
@@ -310,6 +325,96 @@ class _QuickAction extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _MochiGameSuggestion extends StatelessWidget {
+  final int score;
+  final double stressIndex;
+  final double focusScore;
+  final double moodScore;
+
+  const _MochiGameSuggestion({
+    required this.score,
+    required this.stressIndex,
+    required this.focusScore,
+    required this.moodScore,
+  });
+
+  ({String title, String message, IconData icon, Widget game}) _suggestion() {
+    if (stressIndex > 0.7 || score < 30) {
+      return (
+        title: 'Wave Sync',
+        message: 'Mochi thinks some breathing would help right now',
+        icon: Icons.waves_rounded,
+        game: const WaveSyncGame(),
+      );
+    }
+    if (focusScore < 0.3) {
+      return (
+        title: 'Focus Flicker',
+        message: 'Mochi noticed your focus could use a boost',
+        icon: Icons.visibility_rounded,
+        game: const FocusFlickerGame(),
+      );
+    }
+    if (moodScore < 0.4) {
+      return (
+        title: 'Memory Garden',
+        message: "Let's plant some memories together",
+        icon: Icons.local_florist_rounded,
+        game: const MemoryGardenGame(),
+      );
+    }
+    return (
+      title: 'Bubble Drift',
+      message: 'Mochi wants to play! Pop some bubbles?',
+      icon: Icons.bubble_chart_rounded,
+      game: const BubbleDriftGame(),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final s = _suggestion();
+    return GestureDetector(
+      onTap: () {
+        HapticFeedback.lightImpact();
+        Navigator.of(context).push(
+          MaterialPageRoute(builder: (_) => s.game),
+        );
+      },
+      child: GlassCard(
+        tint: AppTheme.accentSoft.withValues(alpha: 0.5),
+        child: Row(
+          children: [
+            Container(
+              width: 44,
+              height: 44,
+              decoration: BoxDecoration(
+                color: AppTheme.accent.withValues(alpha: 0.15),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              alignment: Alignment.center,
+              child: Icon(s.icon, color: AppTheme.accent, size: 22),
+            ),
+            const SizedBox(width: AppTheme.md),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(s.title, style: AppTheme.headlineMed),
+                  const SizedBox(height: 2),
+                  Text(s.message, style: AppTheme.bodySmall),
+                ],
+              ),
+            ),
+            const Icon(Icons.play_arrow_rounded,
+                color: AppTheme.accent, size: 24),
+          ],
+        ),
       ),
     );
   }

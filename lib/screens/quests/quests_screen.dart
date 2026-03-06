@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:zeno/providers/app_state_provider.dart';
+import 'package:zeno/screens/games/focus_flicker_game.dart';
+import 'package:zeno/screens/games/memory_garden_game.dart';
+import 'package:zeno/screens/games/wave_sync_game.dart';
 import 'package:zeno/theme/app_theme.dart';
 import 'package:zeno/widgets/glass_card.dart';
 import 'package:zeno/widgets/mochi_notification_banner.dart';
@@ -17,13 +20,33 @@ class QuestsScreen extends ConsumerStatefulWidget {
 class _QuestsScreenState extends ConsumerState<QuestsScreen> {
   final _bannerKey = GlobalKey<MochiNotificationBannerState>();
 
+  static const _gameQuestMap = {
+    'breathing': WaveSyncGame(),
+    'focus_quest': FocusFlickerGame(),
+    'memory_quest': MemoryGardenGame(),
+  };
+
   void _handleQuestComplete(String questId) {
+    final game = _gameQuestMap[questId];
+    if (game != null) {
+      Navigator.of(context).push<bool>(MaterialPageRoute(builder: (_) => game)).then((completed) {
+        if (completed != true) {
+          _bannerKey.currentState?.show(
+            'Mochi kept the quest open. Finish the game to claim the XP.',
+          );
+          return;
+        }
+        ref.read(appStateProvider.notifier).completeQuest(questId);
+        _bannerKey.currentState?.show(
+          "Quest complete! Mochi's proud of you 🌱",
+        );
+      });
+      return;
+    }
+
     ref.read(appStateProvider.notifier).completeQuest(questId);
-
-    // Mochi feedback via banner
     final state = ref.read(appStateProvider);
-    final questName = state.quests.firstWhere((q) => q.id == questId).title;
-
+    final questName = state.quests.firstWhere((quest) => quest.id == questId).title;
     _bannerKey.currentState?.show(
       "Great job completing $questName! Here's to feeling better. 🌱",
     );
@@ -34,7 +57,7 @@ class _QuestsScreenState extends ConsumerState<QuestsScreen> {
     final state = ref.watch(appStateProvider);
     final quests = state.quests;
     final completedCount =
-        quests.where((q) => q.status.name == 'completed').length;
+        quests.where((quest) => quest.status.name == 'completed').length;
     final pad = MediaQuery.of(context).padding;
 
     return Stack(
@@ -58,10 +81,7 @@ class _QuestsScreenState extends ConsumerState<QuestsScreen> {
                 '$completedCount of ${quests.length} completed',
                 style: AppTheme.bodySmall,
               ).animate().fadeIn(duration: 500.ms, delay: 100.ms),
-
               const SizedBox(height: AppTheme.lg),
-
-              // ── XP progress bar ─────────────────────────────────────
               GlassCard(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -90,31 +110,22 @@ class _QuestsScreenState extends ConsumerState<QuestsScreen> {
                       ),
                     ),
                     const SizedBox(height: 6),
-                    Text(
-                      'Goal: 300 XP',
-                      style: AppTheme.labelSmall,
-                    ),
+                    Text('Goal: 300 XP', style: AppTheme.labelSmall),
                   ],
                 ),
               )
                   .animate()
                   .fadeIn(duration: 500.ms, delay: 200.ms)
                   .slideY(begin: 0.05),
-
               const SizedBox(height: AppTheme.lg),
-
-              // ── Quest list ──────────────────────────────────────────
-              ...List.generate(quests.length, (i) {
+              ...List.generate(quests.length, (index) {
                 return QuestCard(
-                  quest: quests[i],
-                  index: i,
-                  onComplete: () => _handleQuestComplete(quests[i].id),
+                  quest: quests[index],
+                  index: index,
+                  onComplete: () => _handleQuestComplete(quests[index].id),
                 );
               }),
-
               const SizedBox(height: AppTheme.md),
-
-              // ── Streak info ─────────────────────────────────────────
               if (state.user.currentStreak > 0)
                 Center(
                   child: Text(
@@ -127,8 +138,6 @@ class _QuestsScreenState extends ConsumerState<QuestsScreen> {
             ],
           ),
         ),
-
-        // Mochi notification banner
         MochiNotificationBanner(key: _bannerKey),
       ],
     );

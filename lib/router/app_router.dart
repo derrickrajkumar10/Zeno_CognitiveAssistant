@@ -10,6 +10,7 @@ import 'package:zeno/screens/insights/insights_screen.dart';
 import 'package:zeno/screens/scan/scan_screen.dart';
 import 'package:zeno/screens/profile/profile_screen.dart';
 import 'package:zeno/screens/splash/splash_screen.dart';
+import 'package:zeno/screens/games/playroom_screen.dart';
 
 final routerProvider = Provider<GoRouter>((ref) {
   final onboarded =
@@ -50,13 +51,18 @@ final routerProvider = Provider<GoRouter>((ref) {
           ]),
           StatefulShellBranch(routes: [
             GoRoute(
-                path: '/insights',
-                pageBuilder: (c, s) => _fadePage(s, const InsightsScreen())),
+                path: '/playroom',
+                pageBuilder: (c, s) => _fadePage(s, const PlayroomScreen())),
           ]),
           StatefulShellBranch(routes: [
             GoRoute(
                 path: '/scan',
                 pageBuilder: (c, s) => _fadePage(s, const ScanScreen())),
+          ]),
+          StatefulShellBranch(routes: [
+            GoRoute(
+                path: '/insights',
+                pageBuilder: (c, s) => _fadePage(s, const InsightsScreen())),
           ]),
           StatefulShellBranch(routes: [
             GoRoute(

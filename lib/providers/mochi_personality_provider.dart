@@ -154,7 +154,7 @@ final mochiPersonalityProvider = Provider<MochiPersonality>((ref) {
     userName: state.user.name,
     streak: state.user.currentStreak,
     cogniPulseScore: state.cogniPulseScore,
-    scoreDelta: MockData.scoreDelta,
+    scoreDelta: state.scoreDelta,
   );
 });
 
@@ -168,8 +168,9 @@ final mochiCurrentDialogueProvider = Provider<String>((ref) {
   // Weighted random pick: greeting 30%, streak 20%, mood 40%, delta 10%
   final roll = Random().nextDouble();
   if (roll < 0.3) return personality.greeting;
-  if (roll < 0.5 && personality.streakMessage != null)
+  if (roll < 0.5 && personality.streakMessage != null) {
     return personality.streakMessage!;
+  }
   if (roll < 0.9) return personality.moodDialogue;
   if (personality.deltaCommentary != null) return personality.deltaCommentary!;
   return personality.moodDialogue;
