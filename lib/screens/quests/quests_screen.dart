@@ -1,147 +1,136 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:zeno/mock_data.dart';
-import 'package:zeno/models/quest.dart';
 import 'package:zeno/providers/app_state_provider.dart';
 import 'package:zeno/theme/app_theme.dart';
+import 'package:zeno/widgets/glass_card.dart';
 import 'package:zeno/widgets/mochi_notification_banner.dart';
 import 'package:zeno/widgets/quest_card.dart';
 
-class QuestsScreen extends ConsumerWidget {
+class QuestsScreen extends ConsumerStatefulWidget {
   const QuestsScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final quests = ref.watch(questsProvider);
-    final appState = ref.watch(appStateProvider);
+  ConsumerState<QuestsScreen> createState() => _QuestsScreenState();
+}
+
+class _QuestsScreenState extends ConsumerState<QuestsScreen> {
+  final _bannerKey = GlobalKey<MochiNotificationBannerState>();
+
+  void _handleQuestComplete(String questId) {
+    ref.read(appStateProvider.notifier).completeQuest(questId);
+
+    // Mochi feedback via banner
+    final state = ref.read(appStateProvider);
+    final questName = state.quests.firstWhere((q) => q.id == questId).title;
+
+    _bannerKey.currentState?.show(
+      "Great job completing $questName! Here's to feeling better. 🌱",
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final state = ref.watch(appStateProvider);
+    final quests = state.quests;
     final completedCount =
-        quests.where((q) => q.status == QuestStatus.completed).length;
-    final xpProgress = (appState.totalXpToday / 300).clamp(0.0, 1.0);
+        quests.where((q) => q.status.name == 'completed').length;
+    final pad = MediaQuery.of(context).padding;
 
-    ref.listen(questsProvider, (prev, next) {
-      if (prev == null) return;
-      final justCompleted = next.where((q) =>
-          q.status == QuestStatus.completed &&
-          prev.any(
-              (p) => p.id == q.id && p.status != QuestStatus.completed));
-      for (final _ in justCompleted) {
-        final msg = MockData.questCompleteDialogue[
-            DateTime.now().millisecondsSinceEpoch %
-                MockData.questCompleteDialogue.length];
-        MochiNotificationBanner.show(context, msg);
-      }
-    });
-
-    return Scaffold(
-      backgroundColor: Colors.transparent,
-      extendBodyBehindAppBar: true,
-      body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.fromLTRB(20, 16, 20, 100),
+    return Stack(
+      children: [
+        SingleChildScrollView(
+          padding: EdgeInsets.only(
+            top: pad.top + AppTheme.lg,
+            left: AppTheme.lg,
+            right: AppTheme.lg,
+            bottom: pad.bottom + 100,
+          ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    'Daily Quests',
-                    style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                          fontWeight: FontWeight.w800,
-                          color: AppTheme.textPrimary,
-                        ),
-                  ),
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 12, vertical: 6),
-                    decoration: BoxDecoration(
-                      color: AppTheme.warmAccent.withValues(alpha: 0.15),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: const Text(
-                      '🔥 5 day streak',
-                      style: TextStyle(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w700,
-                          color: AppTheme.warmAccent),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 20),
-              Container(
-                padding: const EdgeInsets.all(18),
-                decoration: BoxDecoration(
-                  color: AppTheme.cardSurface,
-                  borderRadius: BorderRadius.circular(24),
-                  border: Border.all(
-                      color: const Color(0xFFE8E5F0)),
-                ),
+              Text('Daily Quests', style: AppTheme.displayMedium)
+                  .animate()
+                  .fadeIn(duration: 500.ms)
+                  .slideY(begin: -0.1),
+              const SizedBox(height: AppTheme.sm),
+              Text(
+                '$completedCount of ${quests.length} completed',
+                style: AppTheme.bodySmall,
+              ).animate().fadeIn(duration: 500.ms, delay: 100.ms),
+
+              const SizedBox(height: AppTheme.lg),
+
+              // ── XP progress bar ─────────────────────────────────────
+              GlassCard(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
+                        Text('Today\'s XP', style: AppTheme.headlineMed),
                         Text(
-                          "Today's XP",
-                          style: Theme.of(context)
-                              .textTheme
-                              .titleSmall
-                              ?.copyWith(
-                                fontWeight: FontWeight.w700,
-                                color: AppTheme.textPrimary,
-                              ),
-                        ),
-                        Text(
-                          '${appState.totalXpToday} / 300 XP',
-                          style: const TextStyle(
-                              fontSize: 13,
-                              color: AppTheme.primaryAccent,
-                              fontWeight: FontWeight.w700),
+                          '${state.totalXpToday} XP',
+                          style: AppTheme.headlineMed.copyWith(
+                            color: AppTheme.primaryLight,
+                          ),
                         ),
                       ],
                     ),
-                    const SizedBox(height: 10),
+                    const SizedBox(height: AppTheme.sm),
                     ClipRRect(
-                      borderRadius: BorderRadius.circular(8),
-                      child: TweenAnimationBuilder<double>(
-                        tween: Tween(begin: 0, end: xpProgress),
-                        duration: const Duration(milliseconds: 800),
-                        curve: Curves.easeOutCubic,
-                        builder: (_, val, __) => LinearProgressIndicator(
-                          value: val,
-                          backgroundColor:
-                              const Color(0xFFE8E5F0),
-                          valueColor: const AlwaysStoppedAnimation(
-                              AppTheme.primaryAccent),
-                          minHeight: 8,
-                        ),
+                      borderRadius: BorderRadius.circular(6),
+                      child: LinearProgressIndicator(
+                        value: (state.totalXpToday / 300).clamp(0.0, 1.0),
+                        minHeight: 8,
+                        backgroundColor: AppTheme.surfaceGlassDim,
+                        valueColor:
+                            const AlwaysStoppedAnimation(AppTheme.primaryLight),
                       ),
                     ),
-                    const SizedBox(height: 8),
+                    const SizedBox(height: 6),
                     Text(
-                      '$completedCount of ${quests.length} quests completed',
-                      style: const TextStyle(
-                          fontSize: 12, color: AppTheme.textSecondary),
+                      'Goal: 300 XP',
+                      style: AppTheme.labelSmall,
                     ),
                   ],
                 ),
-              ),
-              const SizedBox(height: 20),
-              Text(
-                'Quests',
-                style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.w700,
-                      color: AppTheme.textPrimary,
+              )
+                  .animate()
+                  .fadeIn(duration: 500.ms, delay: 200.ms)
+                  .slideY(begin: 0.05),
+
+              const SizedBox(height: AppTheme.lg),
+
+              // ── Quest list ──────────────────────────────────────────
+              ...List.generate(quests.length, (i) {
+                return QuestCard(
+                  quest: quests[i],
+                  index: i,
+                  onComplete: () => _handleQuestComplete(quests[i].id),
+                );
+              }),
+
+              const SizedBox(height: AppTheme.md),
+
+              // ── Streak info ─────────────────────────────────────────
+              if (state.user.currentStreak > 0)
+                Center(
+                  child: Text(
+                    '${state.user.currentStreak}-day streak active',
+                    style: AppTheme.caption.copyWith(
+                      color: AppTheme.primaryLight,
                     ),
-              ),
-              const SizedBox(height: 8),
-              ...quests.asMap().entries.map((e) => QuestCard(quest: e.value, index: e.key)),
+                  ),
+                ).animate().fadeIn(duration: 500.ms, delay: 600.ms),
             ],
           ),
         ),
-      ),
+
+        // Mochi notification banner
+        MochiNotificationBanner(key: _bannerKey),
+      ],
     );
   }
 }

@@ -9,20 +9,27 @@ import 'package:zeno/screens/quests/quests_screen.dart';
 import 'package:zeno/screens/insights/insights_screen.dart';
 import 'package:zeno/screens/scan/scan_screen.dart';
 import 'package:zeno/screens/profile/profile_screen.dart';
+import 'package:zeno/screens/splash/splash_screen.dart';
 
 final routerProvider = Provider<GoRouter>((ref) {
   final onboarded =
       ref.watch(appStateProvider.select((s) => s.onboardingComplete));
 
   return GoRouter(
-    initialLocation: onboarded ? '/home' : '/onboarding',
+    initialLocation: '/splash',
     redirect: (context, state) {
-      if (!onboarded && !state.matchedLocation.startsWith('/onboarding')) {
+      final isSplash = state.matchedLocation == '/splash';
+      final isOnboarding = state.matchedLocation.startsWith('/onboarding');
+      if (!onboarded && !isSplash && !isOnboarding) {
         return '/onboarding';
       }
       return null;
     },
     routes: [
+      GoRoute(
+        path: '/splash',
+        pageBuilder: (ctx, state) => _fadePage(state, const SplashScreen()),
+      ),
       GoRoute(
         path: '/onboarding',
         pageBuilder: (ctx, state) => _fadePage(state, const OnboardingFlow()),

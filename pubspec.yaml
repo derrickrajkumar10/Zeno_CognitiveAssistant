@@ -17,6 +17,7 @@ dependencies:
   http: ^1.2.1
   shared_preferences: ^2.3.2
   lottie: ^3.1.2
+  video_player: ^2.11.0
 
 dev_dependencies:
   flutter_test:
@@ -28,3 +29,5 @@ flutter:
 
   assets:
     - assets/animations/
+    - assets/images/
+    - assets/videos/

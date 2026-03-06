@@ -1,81 +1,81 @@
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:zeno/theme/app_theme.dart';
 
-class MochiNotificationBanner extends StatelessWidget {
-  final String message;
-  const MochiNotificationBanner({required this.message, super.key});
-
-  static void show(BuildContext context, String message) {
-    final overlay = Overlay.of(context);
-    late OverlayEntry entry;
-    entry = OverlayEntry(
-      builder: (_) => _BannerEntry(
-        message: message,
-        onDismiss: () => entry.remove(),
-      ),
-    );
-    overlay.insert(entry);
-  }
+/// Glassmorphism notification banner that slides in from top with Mochi branding.
+class MochiNotificationBanner extends StatefulWidget {
+  const MochiNotificationBanner({super.key});
 
   @override
-  Widget build(BuildContext context) => const SizedBox.shrink();
+  State<MochiNotificationBanner> createState() =>
+      MochiNotificationBannerState();
 }
 
-class _BannerEntry extends StatefulWidget {
-  final String message;
-  final VoidCallback onDismiss;
-  const _BannerEntry({required this.message, required this.onDismiss});
+class MochiNotificationBannerState extends State<MochiNotificationBanner>
+    with SingleTickerProviderStateMixin {
+  String? _message;
+  bool _visible = false;
 
-  @override
-  State<_BannerEntry> createState() => _BannerEntryState();
-}
-
-class _BannerEntryState extends State<_BannerEntry> {
-  @override
-  void initState() {
-    super.initState();
-    Future.delayed(3.seconds, widget.onDismiss);
+  void show(String message) {
+    setState(() {
+      _message = message;
+      _visible = true;
+    });
+    // Auto-dismiss after 3 seconds
+    Future.delayed(const Duration(seconds: 3), () {
+      if (mounted) setState(() => _visible = false);
+    });
   }
 
   @override
   Widget build(BuildContext context) {
-    return Positioned(
-      top: MediaQuery.of(context).padding.top + 12,
-      left: 16,
-      right: 16,
-      child: Material(
-        color: Colors.transparent,
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-          decoration: BoxDecoration(
-            color: AppTheme.cardSurface,
-            borderRadius: BorderRadius.circular(20),
-            border: Border.all(
-                color: AppTheme.primaryAccent.withValues(alpha: 0.3)),
-            boxShadow: [
-              BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.3), blurRadius: 20)
-            ],
-          ),
-          child: Row(children: [
-            const Text('🐾', style: TextStyle(fontSize: 22)),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Text(
-                widget.message,
-                style: const TextStyle(
-                  color: AppTheme.textPrimary,
-                  fontSize: 14,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
+    final pad = MediaQuery.of(context).padding;
+
+    return AnimatedPositioned(
+      duration: 400.ms,
+      curve: Curves.easeOutCubic,
+      top: _visible ? pad.top + AppTheme.sm : -100,
+      left: AppTheme.md,
+      right: AppTheme.md,
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(AppTheme.cardRadiusSm),
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            decoration: BoxDecoration(
+              color: AppTheme.surfaceGlass,
+              borderRadius: BorderRadius.circular(AppTheme.cardRadiusSm),
+              border: Border.all(color: AppTheme.surfaceBorder, width: 0.5),
+              boxShadow: AppTheme.softShadow,
             ),
-          ]),
-        )
-            .animate()
-            .slideY(begin: -1, end: 0, duration: 350.ms, curve: Curves.easeOutCubic)
-            .fade(),
+            child: Row(
+              children: [
+                Container(
+                  width: 28,
+                  height: 28,
+                  decoration: BoxDecoration(
+                    color: AppTheme.primaryLight.withOpacity(0.15),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  alignment: Alignment.center,
+                  child: const Icon(Icons.pets_rounded,
+                      size: 16, color: AppTheme.primaryLight),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    _message ?? '',
+                    style: AppTheme.bodyMedium,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
       ),
     );
   }

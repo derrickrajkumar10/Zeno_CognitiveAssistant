@@ -1,10 +1,10 @@
-import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:video_player/video_player.dart';
 import 'package:zeno/theme/app_theme.dart';
-import 'package:zeno/widgets/mochi_lottie_widget.dart';
+import 'package:zeno/widgets/mochi_widget.dart';
 
 // ─── Shared helpers ────────────────────────────────────────────────────────────
 
@@ -24,12 +24,13 @@ class _PillButton extends StatelessWidget {
         style: ElevatedButton.styleFrom(
           backgroundColor: AppTheme.primaryButton,
           foregroundColor: Colors.white,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(50)),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(50)),
           elevation: 0,
         ),
         child: Text(
           label,
-          style: GoogleFonts.nunito(fontWeight: FontWeight.w700, fontSize: 16),
+          style: AppTheme.labelLarge.copyWith(color: Colors.white),
         ),
       ),
     );
@@ -88,7 +89,11 @@ class _WelcomePageState extends State<WelcomePage>
                   opacity: 0.6,
                   child: Text('✨', style: TextStyle(fontSize: 26)),
                 ),
-              ),
+              ).animate(onPlay: (c) => c.repeat(reverse: true)).moveY(
+                  begin: 0,
+                  end: -8,
+                  duration: 2000.ms,
+                  curve: Curves.easeInOut),
             ),
             Positioned(
               top: 140,
@@ -99,7 +104,14 @@ class _WelcomePageState extends State<WelcomePage>
                   opacity: 0.6,
                   child: Text('🧠', style: TextStyle(fontSize: 24)),
                 ),
-              ),
+              )
+                  .animate(
+                      onPlay: (c) => c.repeat(reverse: true), delay: 600.ms)
+                  .moveY(
+                      begin: 0,
+                      end: -8,
+                      duration: 2000.ms,
+                      curve: Curves.easeInOut),
             ),
             Positioned(
               bottom: 120,
@@ -110,7 +122,14 @@ class _WelcomePageState extends State<WelcomePage>
                   opacity: 0.6,
                   child: Text('🌿', style: TextStyle(fontSize: 28)),
                 ),
-              ),
+              )
+                  .animate(
+                      onPlay: (c) => c.repeat(reverse: true), delay: 1200.ms)
+                  .moveY(
+                      begin: 0,
+                      end: -8,
+                      duration: 2000.ms,
+                      curve: Curves.easeInOut),
             ),
 
             Padding(
@@ -129,10 +148,13 @@ class _WelcomePageState extends State<WelcomePage>
                             width: 180,
                             height: 180,
                             decoration: BoxDecoration(
-                              color: AppTheme.selectedGreen.withValues(alpha: 0.10),
+                              color: AppTheme.selectedGreen
+                                  .withValues(alpha: 0.10),
                               shape: BoxShape.circle,
                             ),
-                            child: const Center(child: MochiLottieWidget(size: 140)),
+                            child: const Center(
+                                child:
+                                    MochiWidget(size: 140, interactive: false)),
                           ),
                           const SizedBox(height: 32),
                           Text(
@@ -218,7 +240,11 @@ class _NameEntryPageState extends State<NameEntryPage> {
                   opacity: 0.6,
                   child: Text('💬', style: TextStyle(fontSize: 24)),
                 ),
-              ),
+              ).animate(onPlay: (c) => c.repeat(reverse: true)).moveY(
+                  begin: 0,
+                  end: -8,
+                  duration: 2000.ms,
+                  curve: Curves.easeInOut),
             ),
             Positioned(
               bottom: 140,
@@ -229,7 +255,14 @@ class _NameEntryPageState extends State<NameEntryPage> {
                   opacity: 0.6,
                   child: Text('🌱', style: TextStyle(fontSize: 26)),
                 ),
-              ),
+              )
+                  .animate(
+                      onPlay: (c) => c.repeat(reverse: true), delay: 600.ms)
+                  .moveY(
+                      begin: 0,
+                      end: -8,
+                      duration: 2000.ms,
+                      curve: Curves.easeInOut),
             ),
             Positioned(
               top: 200,
@@ -240,7 +273,14 @@ class _NameEntryPageState extends State<NameEntryPage> {
                   opacity: 0.6,
                   child: Text('✨', style: TextStyle(fontSize: 22)),
                 ),
-              ),
+              )
+                  .animate(
+                      onPlay: (c) => c.repeat(reverse: true), delay: 1200.ms)
+                  .moveY(
+                      begin: 0,
+                      end: -8,
+                      duration: 2000.ms,
+                      curve: Curves.easeInOut),
             ),
 
             Padding(
@@ -260,7 +300,8 @@ class _NameEntryPageState extends State<NameEntryPage> {
                           color: AppTheme.selectedGreen.withValues(alpha: 0.10),
                           shape: BoxShape.circle,
                         ),
-                        child: const Center(child: MochiLottieWidget(size: 56)),
+                        child: const Center(
+                            child: MochiWidget(size: 56, interactive: false)),
                       ),
                     ],
                   ),
@@ -355,31 +396,51 @@ class AvatarSelectionPage extends StatefulWidget {
 
   static const _avatars = [
     _AvatarOption(
-      id: 'mochi', emoji: '🐻', name: 'Mochi', locked: false, unlock: '',
+      id: 'mochi',
+      emoji: '🐻',
+      name: 'Mochi',
+      locked: false,
+      unlock: '',
       tagline: 'Your cozy bear cub bestie',
       description: 'Mochi is warm, calm and always in your corner.',
       color: Color(0xFFA78BFA),
     ),
     _AvatarOption(
-      id: 'luna', emoji: '🦊', name: 'Luna', locked: true, unlock: 'Reach Level 5',
+      id: 'luna',
+      emoji: '🦊',
+      name: 'Luna',
+      locked: true,
+      unlock: 'Reach Level 5',
       tagline: 'The clever night fox',
       description: 'Luna is sharp-witted and full of late-night wisdom.',
       color: Color(0xFFFF8C42),
     ),
     _AvatarOption(
-      id: 'kai', emoji: '🐼', name: 'Kai', locked: true, unlock: '7-day streak',
+      id: 'kai',
+      emoji: '🐼',
+      name: 'Kai',
+      locked: true,
+      unlock: '7-day streak',
       tagline: 'The chill panda philosopher',
       description: 'Kai reminds you that rest is productive.',
       color: Color(0xFF34C77B),
     ),
     _AvatarOption(
-      id: 'nova', emoji: '🐺', name: 'Nova', locked: true, unlock: '30-day streak',
+      id: 'nova',
+      emoji: '🐺',
+      name: 'Nova',
+      locked: true,
+      unlock: '30-day streak',
       tagline: 'The fierce lone wolf',
       description: 'Nova pushes you past limits you didn\'t know you had.',
       color: Color(0xFF6EAAFF),
     ),
     _AvatarOption(
-      id: 'zara', emoji: '🦁', name: 'Zara', locked: true, unlock: 'Level 10',
+      id: 'zara',
+      emoji: '🦁',
+      name: 'Zara',
+      locked: true,
+      unlock: 'Level 10',
       tagline: 'The bold golden lion',
       description: 'Zara radiates confidence and celebrates every win.',
       color: Color(0xFFF9C74F),
@@ -417,7 +478,11 @@ class _AvatarSelectionPageState extends State<AvatarSelectionPage> {
                   opacity: 0.6,
                   child: Text('🐾', style: TextStyle(fontSize: 26)),
                 ),
-              ),
+              ).animate(onPlay: (c) => c.repeat(reverse: true)).moveY(
+                  begin: 0,
+                  end: -8,
+                  duration: 2000.ms,
+                  curve: Curves.easeInOut),
             ),
             Positioned(
               bottom: 120,
@@ -428,7 +493,14 @@ class _AvatarSelectionPageState extends State<AvatarSelectionPage> {
                   opacity: 0.6,
                   child: Text('🌿', style: TextStyle(fontSize: 28)),
                 ),
-              ),
+              )
+                  .animate(
+                      onPlay: (c) => c.repeat(reverse: true), delay: 600.ms)
+                  .moveY(
+                      begin: 0,
+                      end: -8,
+                      duration: 2000.ms,
+                      curve: Curves.easeInOut),
             ),
             Positioned(
               top: 200,
@@ -439,7 +511,14 @@ class _AvatarSelectionPageState extends State<AvatarSelectionPage> {
                   opacity: 0.6,
                   child: Text('✨', style: TextStyle(fontSize: 22)),
                 ),
-              ),
+              )
+                  .animate(
+                      onPlay: (c) => c.repeat(reverse: true), delay: 1200.ms)
+                  .moveY(
+                      begin: 0,
+                      end: -8,
+                      duration: 2000.ms,
+                      curve: Curves.easeInOut),
             ),
 
             Column(
@@ -473,13 +552,14 @@ class _AvatarSelectionPageState extends State<AvatarSelectionPage> {
                 ),
                 Expanded(
                   child: ListView.separated(
-                    padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 4),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 28, vertical: 4),
                     itemCount: AvatarSelectionPage._avatars.length,
                     separatorBuilder: (_, __) => const SizedBox(height: 10),
                     itemBuilder: (_, i) {
                       final av = AvatarSelectionPage._avatars[i];
                       final isSelected = _selected == av.id;
-                      return GestureDetector(
+                      return _TapScaleWrapper(
                         onTap: () => _onSelect(av.id, av.locked),
                         child: AnimatedContainer(
                           duration: const Duration(milliseconds: 200),
@@ -501,12 +581,14 @@ class _AvatarSelectionPageState extends State<AvatarSelectionPage> {
                           ),
                           child: Row(
                             children: [
-                              Text(av.emoji, style: TextStyle(
-                                fontSize: 26,
-                                color: av.locked
-                                    ? AppTheme.textSecondary.withValues(alpha: 0.4)
-                                    : null,
-                              )),
+                              Text(av.emoji,
+                                  style: TextStyle(
+                                    fontSize: 26,
+                                    color: av.locked
+                                        ? AppTheme.textSecondary
+                                            .withValues(alpha: 0.4)
+                                        : null,
+                                  )),
                               const SizedBox(width: 14),
                               Expanded(
                                 child: Column(
@@ -524,7 +606,9 @@ class _AvatarSelectionPageState extends State<AvatarSelectionPage> {
                                       ),
                                     ),
                                     Text(
-                                      av.locked ? 'Unlocks: ${av.unlock}' : av.tagline,
+                                      av.locked
+                                          ? 'Unlocks: ${av.unlock}'
+                                          : av.tagline,
                                       style: GoogleFonts.nunito(
                                         fontSize: 12,
                                         color: AppTheme.textSecondary,
@@ -538,7 +622,8 @@ class _AvatarSelectionPageState extends State<AvatarSelectionPage> {
                                     size: 16, color: AppTheme.textSecondary)
                               else if (isSelected)
                                 Container(
-                                  width: 22, height: 22,
+                                  width: 22,
+                                  height: 22,
                                   decoration: const BoxDecoration(
                                     color: AppTheme.selectedGreen,
                                     shape: BoxShape.circle,
@@ -548,11 +633,13 @@ class _AvatarSelectionPageState extends State<AvatarSelectionPage> {
                                 )
                               else
                                 Container(
-                                  width: 22, height: 22,
+                                  width: 22,
+                                  height: 22,
                                   decoration: BoxDecoration(
                                     shape: BoxShape.circle,
                                     border: Border.all(
-                                        color: const Color(0xFFD0CDE0), width: 1.5),
+                                        color: const Color(0xFFD0CDE0),
+                                        width: 1.5),
                                   ),
                                 ),
                             ],
@@ -608,7 +695,11 @@ class PermissionsPage extends StatelessWidget {
                   opacity: 0.6,
                   child: Text('🛡️', style: TextStyle(fontSize: 26)),
                 ),
-              ),
+              ).animate(onPlay: (c) => c.repeat(reverse: true)).moveY(
+                  begin: 0,
+                  end: -8,
+                  duration: 2000.ms,
+                  curve: Curves.easeInOut),
             ),
             Positioned(
               bottom: 140,
@@ -619,7 +710,14 @@ class PermissionsPage extends StatelessWidget {
                   opacity: 0.6,
                   child: Text('🔒', style: TextStyle(fontSize: 24)),
                 ),
-              ),
+              )
+                  .animate(
+                      onPlay: (c) => c.repeat(reverse: true), delay: 600.ms)
+                  .moveY(
+                      begin: 0,
+                      end: -8,
+                      duration: 2000.ms,
+                      curve: Curves.easeInOut),
             ),
             Positioned(
               top: 220,
@@ -630,7 +728,14 @@ class PermissionsPage extends StatelessWidget {
                   opacity: 0.6,
                   child: Text('🌿', style: TextStyle(fontSize: 28)),
                 ),
-              ),
+              )
+                  .animate(
+                      onPlay: (c) => c.repeat(reverse: true), delay: 1200.ms)
+                  .moveY(
+                      begin: 0,
+                      end: -8,
+                      duration: 2000.ms,
+                      curve: Curves.easeInOut),
             ),
 
             Padding(
@@ -650,12 +755,14 @@ class PermissionsPage extends StatelessWidget {
                   ),
                   const SizedBox(height: 10),
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
                     decoration: BoxDecoration(
                       color: AppTheme.selectedGreenTint,
                       borderRadius: BorderRadius.circular(12),
                       border: Border.all(
-                          color: AppTheme.selectedGreen.withValues(alpha: 0.35)),
+                          color:
+                              AppTheme.selectedGreen.withValues(alpha: 0.35)),
                     ),
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
@@ -784,81 +891,44 @@ class MeetMochiPage extends StatefulWidget {
 
 class _MeetMochiPageState extends State<MeetMochiPage>
     with TickerProviderStateMixin {
-  late final AnimationController _bgCtrl;
-  late final AnimationController _mochiCtrl;
+  late final VideoPlayerController _videoCtrl;
   late final AnimationController _textCtrl;
-  late final AnimationController _bounceCtrl;
-  late final AnimationController _leafCtrl;
-
-  late final Animation<double> _bgFade;
-  late final Animation<double> _mochiScale;
-  late final Animation<Offset> _mochiSlide;
-  late final Animation<double> _glowPulse;
   late final Animation<double> _textFade;
   late final Animation<Offset> _textSlide;
-  late final Animation<double> _bounce;
 
   bool _showContent = false;
-  bool _leafBurst = false;
-  int _tapCount = 0;
+  bool _videoInitialized = false;
 
   @override
   void initState() {
     super.initState();
-
-    _bgCtrl = AnimationController(vsync: this, duration: 600.ms);
-    _mochiCtrl = AnimationController(vsync: this, duration: 1000.ms);
-    _textCtrl = AnimationController(vsync: this, duration: 600.ms);
-    _bounceCtrl = AnimationController(vsync: this, duration: 1400.ms)
-      ..repeat(reverse: true);
-    _leafCtrl = AnimationController(vsync: this, duration: 400.ms);
-
-    _bgFade = CurvedAnimation(parent: _bgCtrl, curve: Curves.easeOut);
-    _mochiScale = Tween<double>(begin: 0.0, end: 1.0).animate(
-        CurvedAnimation(parent: _mochiCtrl, curve: Curves.elasticOut));
-    _mochiSlide = Tween<Offset>(
-      begin: const Offset(0, 1.2),
-      end: Offset.zero,
-    ).animate(CurvedAnimation(parent: _mochiCtrl, curve: Curves.easeOutCubic));
-    _glowPulse = Tween<double>(begin: 0.7, end: 1.0).animate(
-        CurvedAnimation(parent: _mochiCtrl, curve: Curves.easeOut));
+    _textCtrl = AnimationController(vsync: this, duration: 800.ms);
     _textFade = CurvedAnimation(parent: _textCtrl, curve: Curves.easeOut);
     _textSlide = Tween<Offset>(begin: const Offset(0, 0.25), end: Offset.zero)
-        .animate(CurvedAnimation(parent: _textCtrl, curve: Curves.easeOutCubic));
-    _bounce = Tween<double>(begin: -5.0, end: 5.0).animate(
-        CurvedAnimation(parent: _bounceCtrl, curve: Curves.easeInOut));
+        .animate(
+            CurvedAnimation(parent: _textCtrl, curve: Curves.easeOutCubic));
 
-    _runSequence();
-  }
+    _videoCtrl = VideoPlayerController.asset('assets/videos/meet_mochi.mp4')
+      ..initialize().then((_) {
+        if (!mounted) return;
+        setState(() => _videoInitialized = true);
+        _videoCtrl.setLooping(true);
+        _videoCtrl.play();
 
-  Future<void> _runSequence() async {
-    await Future.delayed(150.ms);
-    _bgCtrl.forward();
-    await Future.delayed(500.ms);
-    _mochiCtrl.forward();
-    await Future.delayed(900.ms);
-    if (mounted) setState(() => _showContent = true);
-    _textCtrl.forward();
-  }
-
-  void _onMochiTap() {
-    HapticFeedback.lightImpact();
-    setState(() {
-      _tapCount++;
-      _leafBurst = true;
-    });
-    _leafCtrl.forward(from: 0).then((_) {
-      if (mounted) setState(() => _leafBurst = false);
-    });
+        // Show text after a short delay once video starts
+        Future.delayed(1200.ms, () {
+          if (mounted) {
+            setState(() => _showContent = true);
+            _textCtrl.forward();
+          }
+        });
+      });
   }
 
   @override
   void dispose() {
-    _bgCtrl.dispose();
-    _mochiCtrl.dispose();
+    _videoCtrl.dispose();
     _textCtrl.dispose();
-    _bounceCtrl.dispose();
-    _leafCtrl.dispose();
     super.dispose();
   }
 
@@ -867,220 +937,93 @@ class _MeetMochiPageState extends State<MeetMochiPage>
     final displayName =
         widget.name.trim().isNotEmpty ? widget.name.trim() : 'you';
 
-    return FadeTransition(
-      opacity: _bgFade,
-      child: Container(
-        color: AppTheme.backgroundOnboardingStats,
-        child: SafeArea(
-          child: Stack(
-            children: [
-              // Floating decoratives
-              Positioned(
-                top: 80, left: 24,
-                child: Transform.rotate(
-                  angle: -0.3,
-                  child: AnimatedBuilder(
-                    animation: _textFade,
-                    builder: (_, __) => Opacity(
-                      opacity: _showContent ? (_textFade.value * 0.55) : 0,
-                      child: const Text('🌿', style: TextStyle(fontSize: 22)),
-                    ),
-                  ),
-                ),
-              ),
-              Positioned(
-                top: 130, right: 20,
-                child: Transform.rotate(
-                  angle: 0.25,
-                  child: AnimatedBuilder(
-                    animation: _textFade,
-                    builder: (_, __) => Opacity(
-                      opacity: _showContent ? (_textFade.value * 0.55) : 0,
-                      child: const Text('🍃', style: TextStyle(fontSize: 18)),
-                    ),
-                  ),
-                ),
-              ),
-              Positioned(
-                bottom: 210, right: 28,
-                child: Transform.rotate(
-                  angle: 0.35,
-                  child: AnimatedBuilder(
-                    animation: _textFade,
-                    builder: (_, __) => Opacity(
-                      opacity: _showContent ? (_textFade.value * 0.55) : 0,
-                      child: const Text('✨', style: TextStyle(fontSize: 20)),
-                    ),
-                  ),
-                ),
-              ),
-              Positioned(
-                bottom: 170, left: 22,
-                child: Transform.rotate(
-                  angle: -0.2,
-                  child: AnimatedBuilder(
-                    animation: _textFade,
-                    builder: (_, __) => Opacity(
-                      opacity: _showContent ? (_textFade.value * 0.55) : 0,
-                      child: const Text('🌸', style: TextStyle(fontSize: 18)),
-                    ),
-                  ),
-                ),
-              ),
+    return Stack(
+      fit: StackFit.expand,
+      children: [
+        // Video Background
+        if (_videoInitialized)
+          FittedBox(
+            fit: BoxFit.cover,
+            child: SizedBox(
+              width: _videoCtrl.value.size.width,
+              height: _videoCtrl.value.size.height,
+              child: VideoPlayer(_videoCtrl),
+            ),
+          )
+        else
+          Container(color: AppTheme.backgroundDeep), // Fallback while loading
 
-              // Leaf burst on tap
-              if (_leafBurst) ..._buildLeafBurst(context),
-
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 28),
-                child: Column(
-                  children: [
-                    const Spacer(flex: 1),
-
-                    // Mochi reveal
-                    GestureDetector(
-                      onTap: _onMochiTap,
-                      child: SlideTransition(
-                        position: _mochiSlide,
-                        child: ScaleTransition(
-                          scale: _mochiScale,
-                          child: AnimatedBuilder(
-                            animation: _bounce,
-                            builder: (_, child) => Transform.translate(
-                              offset: Offset(0, _bounce.value),
-                              child: child,
-                            ),
-                            child: Stack(
-                              alignment: Alignment.center,
-                              children: [
-                                Container(
-                                  width: 280, height: 280,
-                                  decoration: BoxDecoration(
-                                    color: AppTheme.selectedGreen
-                                        .withValues(alpha: 0.04),
-                                    shape: BoxShape.circle,
-                                  ),
-                                ),
-                                ScaleTransition(
-                                  scale: _glowPulse,
-                                  child: Container(
-                                    width: 240, height: 240,
-                                    decoration: BoxDecoration(
-                                      color: AppTheme.selectedGreen
-                                          .withValues(alpha: 0.10),
-                                      shape: BoxShape.circle,
-                                    ),
-                                  ),
-                                ),
-                                const MochiLottieWidget(size: 190, showCrown: true),
-                                if (_tapCount == 0 && _showContent)
-                                  Positioned(
-                                    bottom: 18,
-                                    child: Container(
-                                      padding: const EdgeInsets.symmetric(
-                                          horizontal: 10, vertical: 4),
-                                      decoration: BoxDecoration(
-                                        color: Colors.white,
-                                        borderRadius: BorderRadius.circular(12),
-                                      ),
-                                      child: Text(
-                                        '👆 tap Mochi!',
-                                        style: GoogleFonts.nunito(
-                                          fontSize: 11,
-                                          fontWeight: FontWeight.w600,
-                                          color: AppTheme.textSecondary,
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-
-                    const SizedBox(height: 28),
-
-                    if (_showContent) ...[
-                      FadeTransition(
-                        opacity: _textFade,
-                        child: SlideTransition(
-                          position: _textSlide,
-                          child: Column(
-                            children: [
-                              Text(
-                                'Meet Mochi! 🌿',
-                                textAlign: TextAlign.center,
-                                style: GoogleFonts.nunito(
-                                  fontWeight: FontWeight.w900,
-                                  fontSize: 38,
-                                  color: AppTheme.textPrimary,
-                                ),
-                              ),
-                              const SizedBox(height: 16),
-                              Text(
-                                "Hey $displayName! I'm Mochi 🐻\nI'll keep an eye on how you're doing and check in when it matters. Let's grow together 🌱",
-                                textAlign: TextAlign.center,
-                                style: GoogleFonts.nunito(
-                                  fontSize: 16,
-                                  color: AppTheme.textSecondary,
-                                  height: 1.6,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ] else
-                      const SizedBox(height: 120),
-
-                    const Spacer(flex: 2),
-
-                    if (_showContent)
-                      FadeTransition(
-                        opacity: _textFade,
-                        child: _PillButton(
-                          label: "Let's thrive 🌿",
-                          onPressed: widget.onFinish,
-                        ),
-                      ),
-                    const SizedBox(height: 40),
-                  ],
-                ),
-              ),
-            ],
+        // Subtle gradient overlay to ensure text is readable against the video
+        Container(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: [
+                Colors.black.withValues(alpha: 0.1),
+                Colors.black.withValues(alpha: 0.4),
+                Colors.black.withValues(alpha: 0.7),
+              ],
+              stops: const [0.0, 0.6, 1.0],
+            ),
           ),
         ),
-      ),
-    );
-  }
 
-  List<Widget> _buildLeafBurst(BuildContext context) {
-    final center = MediaQuery.of(context).size;
-    return List.generate(6, (i) {
-      final angle = i * (math.pi * 2 / 6);
-      return Positioned(
-        left: center.width / 2 - 8,
-        top: center.height * 0.40,
-        child: AnimatedBuilder(
-          animation: _leafCtrl,
-          builder: (_, __) {
-            final t = _leafCtrl.value;
-            final r = t * 60;
-            final dx = math.cos(angle) * r;
-            final dy = math.sin(angle) * r - t * 30;
-            return Transform.translate(
-              offset: Offset(dx, dy),
-              child: Opacity(
-                opacity: (1 - t).clamp(0.0, 1.0),
-                child: const Text('🍃', style: TextStyle(fontSize: 16)),
-              ),
-            );
-          },
+        // Text & Button Overlay
+        SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 28),
+            child: Column(
+              children: [
+                const Spacer(flex: 3),
+                if (_showContent) ...[
+                  FadeTransition(
+                    opacity: _textFade,
+                    child: SlideTransition(
+                      position: _textSlide,
+                      child: Column(
+                        children: [
+                          Text(
+                            'Meet Mochi! 🌿',
+                            textAlign: TextAlign.center,
+                            style: GoogleFonts.nunito(
+                              fontWeight: FontWeight.w900,
+                              fontSize: 38,
+                              color: Colors.white,
+                            ),
+                          ),
+                          const SizedBox(height: 16),
+                          Text(
+                            "Hey $displayName! I'm Mochi 🐻\nI'll keep an eye on how you're doing and check in when it matters. Let's grow together 🌱",
+                            textAlign: TextAlign.center,
+                            style: GoogleFonts.nunito(
+                              fontSize: 16,
+                              color: Colors.white.withValues(alpha: 0.9),
+                              height: 1.6,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ] else
+                  const SizedBox(height: 120),
+                const Spacer(flex: 2),
+                if (_showContent)
+                  FadeTransition(
+                    opacity: _textFade,
+                    child: _PillButton(
+                      label: "Let's thrive 🌿",
+                      onPressed: widget.onFinish,
+                    ),
+                  ),
+                const SizedBox(height: 40),
+              ],
+            ),
+          ),
         ),
-      );
-    });
+      ],
+    );
   }
 }
 
@@ -1098,4 +1041,36 @@ class _AvatarOption {
     required this.description,
     required this.color,
   });
+}
+
+// ─── Tap-scale wrapper ────────────────────────────────────────────────────────
+
+class _TapScaleWrapper extends StatefulWidget {
+  final Widget child;
+  final VoidCallback onTap;
+  const _TapScaleWrapper({required this.child, required this.onTap});
+
+  @override
+  State<_TapScaleWrapper> createState() => _TapScaleWrapperState();
+}
+
+class _TapScaleWrapperState extends State<_TapScaleWrapper> {
+  int _tapCount = 0;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: () {
+        setState(() => _tapCount++);
+        widget.onTap();
+      },
+      child: widget.child
+          .animate(key: ValueKey(_tapCount), autoPlay: _tapCount > 0)
+          .scale(
+            begin: const Offset(0.97, 0.97),
+            end: const Offset(1.0, 1.0),
+            duration: 150.ms,
+          ),
+    );
+  }
 }

@@ -5,9 +5,11 @@ import 'package:zeno/models/mochi_state.dart';
 import 'package:zeno/providers/app_state_provider.dart';
 import 'package:zeno/theme/app_theme.dart';
 
+/// Tasteful floating particle overlay for thriving mood.
+/// Can be used standalone (no child required) as a transparent layer.
 class ParticleOverlay extends ConsumerStatefulWidget {
-  final Widget child;
-  const ParticleOverlay({required this.child, super.key});
+  final Widget? child;
+  const ParticleOverlay({this.child, super.key});
 
   @override
   ConsumerState<ParticleOverlay> createState() => _ParticleOverlayState();
@@ -22,25 +24,26 @@ class _ParticleOverlayState extends ConsumerState<ParticleOverlay>
   @override
   void initState() {
     super.initState();
-    _ctrl = AnimationController(vsync: this, duration: const Duration(seconds: 3))
-      ..addListener(_updateParticles)
-      ..repeat();
+    _ctrl =
+        AnimationController(vsync: this, duration: const Duration(seconds: 3))
+          ..addListener(_updateParticles)
+          ..repeat();
     _spawnParticles();
   }
 
   void _spawnParticles() {
     _particles.clear();
-    for (int i = 0; i < 12; i++) {
+    for (int i = 0; i < 8; i++) {
       _particles.add(_Particle(
         x: _rng.nextDouble(),
         y: _rng.nextDouble(),
-        size: 3.0 + _rng.nextDouble() * 4,
-        speed: 0.15 + _rng.nextDouble() * 0.25,
+        size: 2.5 + _rng.nextDouble() * 3,
+        speed: 0.1 + _rng.nextDouble() * 0.2,
         offset: _rng.nextDouble(),
         color: [
           AppTheme.mochiThriving,
           AppTheme.warningAmber,
-          AppTheme.successMint
+          AppTheme.successMint,
         ][_rng.nextInt(3)],
       ));
     }
@@ -48,8 +51,8 @@ class _ParticleOverlayState extends ConsumerState<ParticleOverlay>
 
   void _updateParticles() {
     for (final p in _particles) {
-      p.y -= p.speed * 0.003;
-      p.opacity = (0.7 - ((_ctrl.value + p.offset) % 1.0)).clamp(0, 0.7);
+      p.y -= p.speed * 0.002;
+      p.opacity = (0.5 - ((_ctrl.value + p.offset) % 1.0)).clamp(0, 0.5);
       if (p.y < -0.1) p.y = 1.0 + _rng.nextDouble() * 0.2;
     }
   }
@@ -63,21 +66,27 @@ class _ParticleOverlayState extends ConsumerState<ParticleOverlay>
   @override
   Widget build(BuildContext context) {
     final mood = ref.watch(mochiMoodProvider);
-    if (mood != MochiMoodState.thriving) return widget.child;
-
-    return Stack(children: [
-      widget.child,
-      Positioned.fill(
-        child: IgnorePointer(
-          child: AnimatedBuilder(
-            animation: _ctrl,
-            builder: (_, __) => CustomPaint(
-              painter: _ParticlePainter(List.from(_particles)),
-            ),
+    final particleLayer = Positioned.fill(
+      child: IgnorePointer(
+        child: AnimatedBuilder(
+          animation: _ctrl,
+          builder: (_, __) => CustomPaint(
+            painter: _ParticlePainter(List.from(_particles)),
           ),
         ),
       ),
-    ]);
+    );
+
+    if (mood != MochiMoodState.thriving) {
+      return widget.child ?? const SizedBox.shrink();
+    }
+
+    if (widget.child != null) {
+      return Stack(children: [widget.child!, particleLayer]);
+    }
+
+    // Standalone mode — just the particles, transparent
+    return particleLayer;
   }
 }
 
@@ -91,7 +100,7 @@ class _Particle {
     required this.speed,
     required this.offset,
     required this.color,
-  }) : opacity = 0.5;
+  }) : opacity = 0.3;
 }
 
 class _ParticlePainter extends CustomPainter {
@@ -104,7 +113,7 @@ class _ParticlePainter extends CustomPainter {
       canvas.drawCircle(
         Offset(p.x * size.width, p.y * size.height),
         p.size,
-        Paint()..color = p.color.withValues(alpha: p.opacity.clamp(0.0, 1.0)),
+        Paint()..color = p.color.withOpacity(p.opacity.clamp(0.0, 1.0)),
       );
     }
   }

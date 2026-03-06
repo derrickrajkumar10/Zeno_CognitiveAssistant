@@ -1,13 +1,13 @@
 import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:zeno/mock_data.dart';
 import 'package:zeno/providers/app_state_provider.dart';
-import 'package:zeno/services/ollama_service.dart';
 import 'package:zeno/theme/app_theme.dart';
-import 'package:zeno/widgets/mochi_lottie_widget.dart';
+import 'package:zeno/widgets/glass_card.dart';
+import 'package:zeno/widgets/mochi_widget.dart';
 
 class ScanScreen extends ConsumerStatefulWidget {
   const ScanScreen({super.key});
@@ -16,254 +16,209 @@ class ScanScreen extends ConsumerStatefulWidget {
   ConsumerState<ScanScreen> createState() => _ScanScreenState();
 }
 
-class _ScanScreenState extends ConsumerState<ScanScreen> {
+class _ScanScreenState extends ConsumerState<ScanScreen>
+    with TickerProviderStateMixin {
   bool _scanning = false;
-  bool _scanComplete = false;
+  bool _complete = false;
   int _countdown = 5;
+  int? _newScore;
+  late AnimationController _pulseCtrl;
 
-  Future<void> _startScan() async {
-    HapticFeedback.lightImpact();
-    setState(() {
-      _scanning = true;
-      _scanComplete = false;
-      _countdown = 5;
-    });
-    for (int i = 4; i >= 0; i--) {
-      await Future.delayed(const Duration(seconds: 1));
-      if (mounted) setState(() => _countdown = i);
-    }
-    if (mounted) {
-      setState(() {
-        _scanning = false;
-        _scanComplete = true;
-      });
-      _updateScore();
-    }
+  @override
+  void initState() {
+    super.initState();
+    _pulseCtrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1500),
+    )..repeat(reverse: true);
   }
 
-  void _updateScore() {
-    HapticFeedback.lightImpact();
-    final newScore = 73 + Random().nextInt(10) - 5;
-    ref.read(appStateProvider.notifier).updateCogniPulse(newScore);
-    ref.read(mochiDialogueProvider.notifier).state = MockData
-        .scanCompleteDialogue[DateTime.now().millisecondsSinceEpoch %
-            MockData.scanCompleteDialogue.length];
+  @override
+  void dispose() {
+    _pulseCtrl.dispose();
+    super.dispose();
+  }
+
+  void _startScan() {
+    HapticFeedback.mediumImpact();
+    setState(() {
+      _scanning = true;
+      _complete = false;
+      _countdown = 5;
+    });
+    _tickCountdown();
+  }
+
+  void _tickCountdown() {
+    if (_countdown <= 0) {
+      _completeScan();
+      return;
+    }
+    Future.delayed(const Duration(seconds: 1), () {
+      if (!mounted) return;
+      setState(() => _countdown--);
+      _tickCountdown();
+    });
+  }
+
+  void _completeScan() {
+    final score = 60 + Random().nextInt(30);
+    ref.read(appStateProvider.notifier).updateCogniPulse(score);
+    HapticFeedback.heavyImpact();
+    setState(() {
+      _scanning = false;
+      _complete = true;
+      _newScore = score;
+    });
   }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppTheme.backgroundScan,
-      body: SafeArea(
-        child: Stack(
-          children: [
-            // Floating decoratives
-            Positioned(
-              top: 30,
-              right: 24,
-              child: Transform.rotate(
-                angle: 0.2,
-                child: const Opacity(
-                  opacity: 0.6,
-                  child: Text('✨', style: TextStyle(fontSize: 26)),
-                ),
-              ),
-            ),
-            Positioned(
-              top: 100,
-              left: 16,
-              child: Transform.rotate(
-                angle: -0.3,
-                child: const Opacity(
-                  opacity: 0.6,
-                  child: Text('🔍', style: TextStyle(fontSize: 24)),
-                ),
-              ),
-            ),
-            Positioned(
-              bottom: 160,
-              right: 20,
-              child: Transform.rotate(
-                angle: 0.4,
-                child: const Opacity(
-                  opacity: 0.6,
-                  child: Text('🌿', style: TextStyle(fontSize: 28)),
-                ),
-              ),
-            ),
+    final pad = MediaQuery.of(context).padding;
 
-            // Main content
-            Padding(
-              padding: const EdgeInsets.fromLTRB(24, 24, 24, 0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Hero heading
-                  Text(
-                    'Snap your\nmood 📸',
-                    style: GoogleFonts.nunito(
-                      fontWeight: FontWeight.w900,
-                      fontSize: 40,
-                      color: AppTheme.textPrimary,
-                      height: 1.05,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'Quick scan to update your CogniPulse',
-                    style: GoogleFonts.nunito(
-                      fontSize: 16,
-                      color: AppTheme.textSecondary,
-                    ),
-                  ),
-                  const SizedBox(height: 32),
+    return SingleChildScrollView(
+      padding: EdgeInsets.only(
+        top: pad.top + AppTheme.lg,
+        left: AppTheme.lg,
+        right: AppTheme.lg,
+        bottom: pad.bottom + 100,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('CogniPulse Scan', style: AppTheme.displayMedium)
+              .animate()
+              .fadeIn(duration: 500.ms)
+              .slideY(begin: -0.1),
+          const SizedBox(height: AppTheme.sm),
+          Text(
+            'Quick check-in with your mind',
+            style: AppTheme.bodySmall,
+          ).animate().fadeIn(duration: 500.ms, delay: 100.ms),
 
-                  // Camera viewport with Mochi peeking
-                  Expanded(
-                    child: Center(
-                      child: Stack(
-                        clipBehavior: Clip.none,
-                        children: [
-                          // Scan viewport
-                          AnimatedContainer(
-                            duration: const Duration(milliseconds: 400),
-                            width: double.infinity,
-                            constraints: const BoxConstraints(maxHeight: 320),
-                            decoration: BoxDecoration(
-                              color: _scanComplete
-                                  ? AppTheme.selectedGreenTint
-                                  : const Color(0xFFF0EAE0),
-                              borderRadius: BorderRadius.circular(24),
-                              border: Border.all(
-                                color: _scanComplete
-                                    ? AppTheme.selectedGreen
-                                    : const Color(0xFFE0D8D0),
-                                width: 2,
-                              ),
+          const SizedBox(height: AppTheme.xxl),
+
+          // ── Scan area ──────────────────────────────────────────
+          Center(
+            child: Column(
+              children: [
+                // Mochi watching
+                if (!_scanning)
+                  const MochiWidget(size: 120, interactive: false)
+                      .animate()
+                      .fadeIn(duration: 600.ms),
+
+                if (_scanning) ...[
+                  // Pulsing scan ring
+                  AnimatedBuilder(
+                    animation: _pulseCtrl,
+                    builder: (_, __) {
+                      final scale = 1.0 + (_pulseCtrl.value * 0.15);
+                      return Transform.scale(
+                        scale: scale,
+                        child: Container(
+                          width: 160,
+                          height: 160,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            border: Border.all(
+                              color: AppTheme.primaryLight.withOpacity(0.5),
+                              width: 3,
                             ),
-                            child: Center(
-                              child: _scanComplete
-                                  ? Column(
-                                      mainAxisAlignment: MainAxisAlignment.center,
-                                      children: [
-                                        const Icon(Icons.check_circle_rounded,
-                                            color: AppTheme.successMint, size: 56),
-                                        const SizedBox(height: 12),
-                                        Text(
-                                          'Scan complete!',
-                                          style: GoogleFonts.nunito(
-                                            fontWeight: FontWeight.w700,
-                                            fontSize: 20,
-                                            color: AppTheme.textPrimary,
-                                          ),
-                                        ),
-                                        const SizedBox(height: 4),
-                                        Text(
-                                          'Valence: 7.2 / 10 · Neutral-Positive',
-                                          style: GoogleFonts.nunito(
-                                            fontSize: 14,
-                                            color: AppTheme.textSecondary,
-                                          ),
-                                        ),
-                                      ],
-                                    )
-                                  : _scanning
-                                      ? Column(
-                                          mainAxisAlignment:
-                                              MainAxisAlignment.center,
-                                          children: [
-                                            const Icon(Icons.face_outlined,
-                                                color: AppTheme.textSecondary,
-                                                size: 56),
-                                            const SizedBox(height: 12),
-                                            Text(
-                                              _countdown > 0
-                                                  ? 'Scanning… $_countdown'
-                                                  : 'Processing…',
-                                              style: GoogleFonts.nunito(
-                                                fontSize: 18,
-                                                color: AppTheme.textSecondary,
-                                              ),
-                                            ),
-                                          ],
-                                        )
-                                      : Column(
-                                          mainAxisAlignment:
-                                              MainAxisAlignment.center,
-                                          children: [
-                                            Icon(Icons.camera_alt_rounded,
-                                                color: AppTheme.textSecondary
-                                                    .withValues(alpha: 0.5),
-                                                size: 64),
-                                            const SizedBox(height: 12),
-                                            Text(
-                                              'Tap below to start',
-                                              style: GoogleFonts.nunito(
-                                                fontSize: 16,
-                                                color: AppTheme.textSecondary,
-                                              ),
-                                            ),
-                                          ],
-                                        ),
+                            boxShadow: [
+                              BoxShadow(
+                                color: AppTheme.primaryLight
+                                    .withOpacity(0.2 * (1 - _pulseCtrl.value)),
+                                blurRadius: 30,
+                                spreadRadius: 10,
+                              ),
+                            ],
+                          ),
+                          alignment: Alignment.center,
+                          child: Text(
+                            '$_countdown',
+                            style: AppTheme.displayLarge.copyWith(
+                              color: AppTheme.primaryLight,
+                              fontWeight: FontWeight.w700,
                             ),
                           ),
-
-                          // Mochi peeking from bottom
-                          const Positioned(
-                            bottom: -30,
-                            left: 0,
-                            right: 0,
-                            child: Center(
-                              child: SizedBox(
-                                width: 70,
-                                height: 40,
-                                child: ClipRect(
-                                  child: Align(
-                                    alignment: Alignment.topCenter,
-                                    heightFactor: 0.4,
-                                    child: MochiLottieWidget(size: 100),
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
+                        ),
+                      );
+                    },
+                  ),
+                  const SizedBox(height: AppTheme.lg),
+                  Text(
+                    'Scanning...',
+                    style: AppTheme.bodyLarge.copyWith(
+                      color: AppTheme.primaryLight,
                     ),
                   ),
-                  const SizedBox(height: 40),
-
-                  // CTA button
-                  SizedBox(
-                    width: double.infinity,
-                    height: 56,
-                    child: ElevatedButton(
-                      onPressed: _scanning ? null : _startScan,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppTheme.primaryButton,
-                        foregroundColor: Colors.white,
-                        disabledBackgroundColor:
-                            AppTheme.primaryButton.withValues(alpha: 0.4),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(50),
-                        ),
-                        elevation: 0,
-                      ),
-                      child: Text(
-                        _scanComplete ? 'Scan again 📸' : 'Start scan 📸',
-                        style: GoogleFonts.nunito(
-                          fontWeight: FontWeight.w700,
-                          fontSize: 16,
-                        ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 32),
                 ],
-              ),
+
+                if (_complete && _newScore != null) ...[
+                  const SizedBox(height: AppTheme.lg),
+                  // Score reveal
+                  GlassCard(
+                    tint: AppTheme.primarySoft.withOpacity(0.5),
+                    child: Column(
+                      children: [
+                        Text(
+                          'Scan Complete',
+                          style: AppTheme.headlineMed.copyWith(
+                            color: AppTheme.primary,
+                          ),
+                        ),
+                        const SizedBox(height: AppTheme.md),
+                        Text(
+                          '$_newScore',
+                          style: AppTheme.displayLarge.copyWith(
+                            fontSize: 56,
+                            color: AppTheme.primary,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text('CogniPulse Score', style: AppTheme.bodySmall),
+                        const SizedBox(height: AppTheme.md),
+                        Text(
+                          MockData.scanCompleteDialogue[
+                              DateTime.now().millisecond %
+                                  MockData.scanCompleteDialogue.length],
+                          style: AppTheme.bodyMedium.copyWith(
+                            fontStyle: FontStyle.italic,
+                            color: AppTheme.textSecondary,
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                      ],
+                    ),
+                  ).animate().fadeIn(duration: 600.ms).scale(
+                      begin: const Offset(0.9, 0.9),
+                      end: const Offset(1, 1),
+                      duration: 500.ms,
+                      curve: Curves.easeOutBack),
+                ],
+              ],
             ),
-          ],
-        ),
+          ),
+
+          const SizedBox(height: AppTheme.xxl),
+
+          // ── Start button ────────────────────────────────────────
+          if (!_scanning)
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: _complete ? _startScan : _startScan,
+                child: Text(
+                  _complete ? 'Scan Again' : 'Begin Scan',
+                  style: AppTheme.labelLarge.copyWith(color: Colors.white),
+                ),
+              ),
+            )
+                .animate()
+                .fadeIn(duration: 500.ms, delay: 200.ms)
+                .slideY(begin: 0.1),
+        ],
       ),
     );
   }

@@ -1,172 +1,316 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:google_fonts/google_fonts.dart';
+import 'package:zeno/mock_data.dart';
+import 'package:zeno/models/mochi_state.dart';
 import 'package:zeno/providers/app_state_provider.dart';
+import 'package:zeno/providers/mochi_personality_provider.dart';
 import 'package:zeno/theme/app_theme.dart';
+import 'package:zeno/widgets/glass_card.dart';
 import 'package:zeno/widgets/mochi_dialogue_bubble.dart';
-import 'package:zeno/widgets/mochi_lottie_widget.dart';
+import 'package:zeno/widgets/mochi_widget.dart';
 import 'package:zeno/widgets/particle_overlay.dart';
 
 class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key});
 
+  String _greeting() {
+    final hour = DateTime.now().hour;
+    if (hour < 12) return 'Good morning';
+    if (hour < 17) return 'Good afternoon';
+    if (hour < 21) return 'Good evening';
+    return 'Good night';
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final isLive = ref.watch(isOllamaLiveProvider);
+    final state = ref.watch(appStateProvider);
+    final personality = ref.watch(mochiPersonalityProvider);
+    final score = state.cogniPulseScore;
+    final pad = MediaQuery.of(context).padding;
 
-    return Scaffold(
-      backgroundColor: AppTheme.backgroundHome,
-      floatingActionButton: _DebugFab(isLive: isLive),
-      body: SafeArea(
-        child: Stack(
-          children: [
-            // Floating decoratives
-            Positioned(
-              top: 40,
-              left: 20,
-              child: Transform.rotate(
-                angle: -0.3,
-                child: const Opacity(
-                  opacity: 0.6,
-                  child: Text('🌿', style: TextStyle(fontSize: 28)),
-                ),
-              ),
-            ),
-            Positioned(
-              top: 60,
-              right: 24,
-              child: Transform.rotate(
-                angle: 0.2,
-                child: const Opacity(
-                  opacity: 0.6,
-                  child: Text('✨', style: TextStyle(fontSize: 24)),
-                ),
-              ),
-            ),
-            Positioned(
-              bottom: 120,
-              left: 30,
-              child: Transform.rotate(
-                angle: 0.4,
-                child: const Opacity(
-                  opacity: 0.6,
-                  child: Text('🍃', style: TextStyle(fontSize: 26)),
-                ),
-              ),
-            ),
-            Positioned(
-              top: MediaQuery.of(context).size.height * 0.4,
-              right: 16,
-              child: Transform.rotate(
-                angle: -0.15,
-                child: const Opacity(
-                  opacity: 0.6,
-                  child: Text('🌱', style: TextStyle(fontSize: 24)),
-                ),
-              ),
-            ),
+    return Stack(
+      children: [
+        // Main scrollable content
+        SingleChildScrollView(
+          padding: EdgeInsets.only(
+            top: pad.top + AppTheme.lg,
+            left: AppTheme.lg,
+            right: AppTheme.lg,
+            bottom: pad.bottom + 100, // room for floating nav
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // ── Greeting ────────────────────────────────────────────
+              Text(
+                _greeting() + ',',
+                style:
+                    AppTheme.bodyLarge.copyWith(color: AppTheme.textSecondary),
+              ).animate().fadeIn(duration: 500.ms).slideY(begin: -0.1),
+              const SizedBox(height: 2),
+              Text(
+                state.user.name,
+                style: AppTheme.displayMedium,
+              )
+                  .animate()
+                  .fadeIn(duration: 600.ms, delay: 100.ms)
+                  .slideY(begin: -0.1),
 
-            // Main content
-            Padding(
-              padding: const EdgeInsets.fromLTRB(24, 24, 24, 0),
-              child: Column(
+              const SizedBox(height: AppTheme.xl),
+
+              // ── Mochi area ──────────────────────────────────────────
+              Center(
+                child: Column(
+                  children: [
+                    const MochiDialogueBubble(),
+                    const SizedBox(height: AppTheme.md),
+                    const MochiWidget(size: 180, showCrown: true)
+                        .animate()
+                        .fadeIn(duration: 800.ms, delay: 200.ms)
+                        .scale(
+                            begin: const Offset(0.8, 0.8),
+                            end: const Offset(1, 1),
+                            duration: 600.ms,
+                            curve: Curves.easeOutBack),
+                  ],
+                ),
+              ),
+
+              const SizedBox(height: AppTheme.xl),
+
+              // ── CogniPulse summary card ─────────────────────────────
+              GlassCard(
+                child: Row(
+                  children: [
+                    // Score ring
+                    SizedBox(
+                      width: 64,
+                      height: 64,
+                      child: Stack(
+                        alignment: Alignment.center,
+                        children: [
+                          SizedBox(
+                            width: 64,
+                            height: 64,
+                            child: CircularProgressIndicator(
+                              value: score / 100,
+                              strokeWidth: 4,
+                              backgroundColor: AppTheme.surfaceBorder,
+                              valueColor: AlwaysStoppedAnimation(
+                                _scoreColor(score),
+                              ),
+                              strokeCap: StrokeCap.round,
+                            ),
+                          ),
+                          Text(
+                            '$score',
+                            style: AppTheme.displaySmall.copyWith(
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: AppTheme.md),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'CogniPulse',
+                            style: AppTheme.headlineMed,
+                          ),
+                          const SizedBox(height: 2),
+                          Row(
+                            children: [
+                              Text(
+                                personality.mood.label,
+                                style: AppTheme.bodySmall.copyWith(
+                                  color: _scoreColor(score),
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              _DeltaChip(delta: MockData.scoreDelta),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                    Icon(
+                      Icons.chevron_right_rounded,
+                      color: AppTheme.textTertiary,
+                    ),
+                  ],
+                ),
+              )
+                  .animate()
+                  .fadeIn(duration: 500.ms, delay: 300.ms)
+                  .slideY(begin: 0.05),
+
+              const SizedBox(height: AppTheme.md),
+
+              // ── Quick actions ───────────────────────────────────────
+              Row(
                 children: [
-                  const Spacer(flex: 1),
-
-                  // Hero heading
-                  Text(
-                    'How are you\nfeeling?',
-                    textAlign: TextAlign.center,
-                    style: GoogleFonts.nunito(
-                      fontWeight: FontWeight.w900,
-                      fontSize: 44,
-                      color: AppTheme.textPrimary,
-                      height: 1.05,
+                  Expanded(
+                    child: _QuickAction(
+                      icon: Icons.favorite_rounded,
+                      label: 'Start Scan',
+                      color: AppTheme.accent,
+                      onTap: () {},
                     ),
                   ),
-                  const SizedBox(height: 32),
+                  const SizedBox(width: AppTheme.md),
+                  Expanded(
+                    child: _QuickAction(
+                      icon: Icons.auto_awesome_rounded,
+                      label: 'Daily Quest',
+                      color: AppTheme.primaryLight,
+                      onTap: () {},
+                    ),
+                  ),
+                ],
+              )
+                  .animate()
+                  .fadeIn(duration: 500.ms, delay: 400.ms)
+                  .slideY(begin: 0.05),
 
-                  // Mochi + dialogue
-                  const Center(
-                    child: Hero(
-                      tag: 'mochi-hero',
-                      child: ParticleOverlay(
+              const SizedBox(height: AppTheme.lg),
+
+              // ── Streak banner ───────────────────────────────────────
+              if (state.user.currentStreak > 0)
+                GlassCard(
+                  tint: AppTheme.primarySoft.withOpacity(0.5),
+                  child: Row(
+                    children: [
+                      Container(
+                        width: 44,
+                        height: 44,
+                        decoration: BoxDecoration(
+                          color: AppTheme.primaryLight.withOpacity(0.15),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        alignment: Alignment.center,
+                        child: Text('🔥', style: TextStyle(fontSize: 22)),
+                      ),
+                      const SizedBox(width: AppTheme.md),
+                      Expanded(
                         child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            SizedBox(
-                              width: 280,
-                              child: MochiDialogueBubble(),
+                            Text(
+                              '${state.user.currentStreak}-day streak',
+                              style: AppTheme.headlineMed.copyWith(
+                                color: AppTheme.primary,
+                              ),
                             ),
-                            SizedBox(height: 12),
-                            MochiLottieWidget(size: 220),
+                            Text(
+                              'Keep checking in to grow your streak',
+                              style: AppTheme.bodySmall,
+                            ),
                           ],
                         ),
                       ),
-                    ),
+                    ],
                   ),
-
-                  const Spacer(flex: 2),
-
-                  // CTA button
-                  SizedBox(
-                    width: double.infinity,
-                    height: 56,
-                    child: ElevatedButton(
-                      onPressed: () => HapticFeedback.lightImpact(),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppTheme.primaryButton,
-                        foregroundColor: Colors.white,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(50),
-                        ),
-                        elevation: 0,
-                      ),
-                      child: Text(
-                        'Check in 🌿',
-                        style: GoogleFonts.nunito(
-                          fontWeight: FontWeight.w700,
-                          fontSize: 16,
-                        ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 32),
-                ],
-              ),
-            ),
-          ],
+                )
+                    .animate()
+                    .fadeIn(duration: 500.ms, delay: 500.ms)
+                    .slideY(begin: 0.05),
+            ],
+          ),
         ),
+
+        // ── Particle overlay (thriving mood only) ──────────────────
+        if (score >= 80) const ParticleOverlay(),
+      ],
+    );
+  }
+
+  Color _scoreColor(int score) {
+    if (score >= 80) return AppTheme.mochiThriving;
+    if (score >= 55) return AppTheme.mochiBalanced;
+    if (score >= 30) return AppTheme.mochiDrifting;
+    return AppTheme.mochiStruggling;
+  }
+}
+
+class _DeltaChip extends StatelessWidget {
+  final int delta;
+  const _DeltaChip({required this.delta});
+
+  @override
+  Widget build(BuildContext context) {
+    final positive = delta >= 0;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      decoration: BoxDecoration(
+        color: (positive ? AppTheme.success : AppTheme.error).withOpacity(0.12),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            positive ? Icons.trending_up_rounded : Icons.trending_down_rounded,
+            size: 14,
+            color: positive ? AppTheme.success : AppTheme.error,
+          ),
+          const SizedBox(width: 3),
+          Text(
+            '${positive ? "+" : ""}$delta',
+            style: AppTheme.caption.copyWith(
+              color: positive ? AppTheme.success : AppTheme.error,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ],
       ),
     );
   }
 }
 
-class _DebugFab extends StatelessWidget {
-  final bool isLive;
-  const _DebugFab({required this.isLive});
+class _QuickAction extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final Color color;
+  final VoidCallback onTap;
+
+  const _QuickAction({
+    required this.icon,
+    required this.label,
+    required this.color,
+    required this.onTap,
+  });
 
   @override
   Widget build(BuildContext context) {
-    return FloatingActionButton.small(
-      onPressed: null,
-      backgroundColor: AppTheme.cardSurface.withValues(alpha: 0.9),
-      child: Row(mainAxisSize: MainAxisSize.min, children: [
-        Icon(
-          isLive ? Icons.wifi_rounded : Icons.wifi_off_rounded,
-          size: 12,
-          color: isLive ? AppTheme.successMint : AppTheme.textSecondary,
-        ),
-        const SizedBox(width: 2),
-        Text(
-          isLive ? 'LIVE' : 'MOCK',
-          style: TextStyle(
-            fontSize: 8,
-            fontWeight: FontWeight.w700,
-            color: isLive ? AppTheme.successMint : AppTheme.textSecondary,
+    return GlassCard(
+      onTap: onTap,
+      padding: const EdgeInsets.all(AppTheme.md),
+      child: Row(
+        children: [
+          Container(
+            width: 40,
+            height: 40,
+            decoration: BoxDecoration(
+              color: color.withOpacity(0.12),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            alignment: Alignment.center,
+            child: Icon(icon, color: color, size: 20),
           ),
-        ),
-      ]),
+          const SizedBox(width: 12),
+          Flexible(
+            child: Text(
+              label,
+              style: AppTheme.headlineMed,
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

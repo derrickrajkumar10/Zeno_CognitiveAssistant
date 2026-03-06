@@ -1,16 +1,30 @@
+import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:zeno/models/mochi_state.dart';
 import 'package:zeno/providers/app_state_provider.dart';
-import 'package:zeno/services/ollama_service.dart';
+import 'package:zeno/theme/app_theme.dart';
 
+/// The Mochi character widget — a living, breathing companion.
+///
+/// Features:
+/// - Mood-reactive body color and expressions
+/// - Idle animations: breathing, blinking, looking around
+/// - Tap reactions: squish, bounce, yawn, nod
+/// - Ambient glow based on mood
 class MochiWidget extends ConsumerStatefulWidget {
   final double size;
-  final bool showThinking;
   final bool showCrown;
-  const MochiWidget({this.size = 200, this.showThinking = false, this.showCrown = false, super.key});
+  final bool interactive;
+
+  const MochiWidget({
+    super.key,
+    this.size = 200,
+    this.showCrown = false,
+    this.interactive = true,
+  });
 
   @override
   ConsumerState<MochiWidget> createState() => _MochiWidgetState();
@@ -18,275 +32,482 @@ class MochiWidget extends ConsumerStatefulWidget {
 
 class _MochiWidgetState extends ConsumerState<MochiWidget>
     with TickerProviderStateMixin {
+  // ── Animation controllers ──────────────────────────────────────────────
   late final AnimationController _breathCtrl;
+  late final AnimationController _blinkCtrl;
+  late final AnimationController _lookCtrl;
   late final AnimationController _tapCtrl;
+  late final AnimationController _earCtrl;
+
+  // ── Animation values ───────────────────────────────────────────────────
   late final Animation<double> _breathAnim;
+  late final Animation<double> _blinkAnim;
+  late final Animation<Offset> _lookAnim;
   late final Animation<double> _tapAnim;
+
+  // ── State ──────────────────────────────────────────────────────────────
+  bool _isBlinking = false;
+  Offset _eyeOffset = Offset.zero;
+  int _tapCount = 0;
 
   @override
   void initState() {
     super.initState();
-    _breathCtrl = AnimationController(vsync: this, duration: 2000.ms)
+
+    // Breathing — continuous gentle pulse
+    _breathCtrl = AnimationController(vsync: this, duration: 2500.ms)
       ..repeat(reverse: true);
     _breathAnim = CurvedAnimation(parent: _breathCtrl, curve: Curves.easeInOut);
 
-    _tapCtrl = AnimationController(vsync: this, duration: 600.ms);
+    // Blink — triggered randomly
+    _blinkCtrl = AnimationController(vsync: this, duration: 150.ms);
+    _blinkAnim = Tween<double>(begin: 1.0, end: 0.05).animate(
+      CurvedAnimation(parent: _blinkCtrl, curve: Curves.easeInOut),
+    );
+    _blinkCtrl.addStatusListener((status) {
+      if (status == AnimationStatus.completed) {
+        _blinkCtrl.reverse();
+      } else if (status == AnimationStatus.dismissed) {
+        setState(() => _isBlinking = false);
+        _scheduleBlink();
+      }
+    });
+    _scheduleBlink();
+
+    // Looking around — random eye drift
+    _lookCtrl = AnimationController(vsync: this, duration: 2000.ms);
+    _lookAnim = Tween<Offset>(begin: Offset.zero, end: Offset.zero).animate(
+      CurvedAnimation(parent: _lookCtrl, curve: Curves.easeInOut),
+    );
+    _scheduleLook();
+
+    // Tap reaction — spring bounce
+    _tapCtrl = AnimationController(vsync: this, duration: 500.ms);
     _tapAnim = TweenSequence<double>([
-      TweenSequenceItem(tween: Tween(begin: 1.0, end: 1.18), weight: 35),
-      TweenSequenceItem(tween: Tween(begin: 1.18, end: 0.95), weight: 35),
-      TweenSequenceItem(tween: Tween(begin: 0.95, end: 1.0), weight: 30),
+      TweenSequenceItem(tween: Tween(begin: 1.0, end: 0.85), weight: 15),
+      TweenSequenceItem(tween: Tween(begin: 0.85, end: 1.12), weight: 25),
+      TweenSequenceItem(tween: Tween(begin: 1.12, end: 0.97), weight: 25),
+      TweenSequenceItem(tween: Tween(begin: 0.97, end: 1.0), weight: 35),
     ]).animate(CurvedAnimation(parent: _tapCtrl, curve: Curves.easeOut));
+
+    // Ear twitch
+    _earCtrl = AnimationController(vsync: this, duration: 300.ms);
+    _scheduleEarTwitch();
+  }
+
+  void _scheduleBlink() {
+    final delay = 2500 + Random().nextInt(4000);
+    Future.delayed(Duration(milliseconds: delay), () {
+      if (!mounted) return;
+      setState(() => _isBlinking = true);
+      _blinkCtrl.forward();
+    });
+  }
+
+  void _scheduleLook() {
+    final delay = 4000 + Random().nextInt(6000);
+    Future.delayed(Duration(milliseconds: delay), () {
+      if (!mounted) return;
+      final dx = (Random().nextDouble() - 0.5) * 6;
+      final dy = (Random().nextDouble() - 0.5) * 3;
+      setState(() => _eyeOffset = Offset(dx, dy));
+      _scheduleLook();
+    });
+  }
+
+  void _scheduleEarTwitch() {
+    final delay = 8000 + Random().nextInt(8000);
+    Future.delayed(Duration(milliseconds: delay), () {
+      if (!mounted) return;
+      _earCtrl.forward().then((_) => _earCtrl.reverse());
+      _scheduleEarTwitch();
+    });
+  }
+
+  void _handleTap() {
+    if (!widget.interactive) return;
+    HapticFeedback.lightImpact();
+    _tapCtrl.forward(from: 0);
+    _tapCount++;
+
+    // Cycle to next dialogue on tap
+    ref.read(appStateProvider.notifier).cycleDialogue();
   }
 
   @override
   void dispose() {
     _breathCtrl.dispose();
+    _blinkCtrl.dispose();
+    _lookCtrl.dispose();
     _tapCtrl.dispose();
+    _earCtrl.dispose();
     super.dispose();
-  }
-
-  Future<void> _handleTap() async {
-    HapticFeedback.lightImpact();
-    _tapCtrl.forward(from: 0);
-
-    ref.read(mochiLoadingProvider.notifier).state = true;
-    final score = ref.read(cogniPulseProvider);
-    final mood = ref.read(mochiMoodProvider);
-    final line = await ref.read(ollamaServiceProvider).getMochiDialogue(
-          cogniPulseScore: score,
-          moodState: mood,
-          setOllamaStatus: (live) =>
-              ref.read(appStateProvider.notifier).setOllamaStatus(live),
-        );
-    ref.read(mochiDialogueProvider.notifier).state = line;
-    ref.read(mochiLoadingProvider.notifier).state = false;
   }
 
   @override
   Widget build(BuildContext context) {
-    final mood = ref.watch(mochiMoodProvider);
-    final thinking = ref.watch(mochiLoadingProvider);
+    final score = ref.watch(appStateProvider).cogniPulseScore;
+    final mood = MochiMoodStateX.fromScore(score);
+    final size = widget.size;
 
     return GestureDetector(
       onTap: _handleTap,
       child: AnimatedBuilder(
-        animation: Listenable.merge([_breathAnim, _tapAnim]),
-        builder: (context, _) {
-          Widget mochi = Transform.scale(
-            scale: _tapAnim.value,
+        animation: Listenable.merge([_breathAnim, _tapAnim, _blinkAnim]),
+        builder: (context, child) {
+          final breathScale = 1.0 + (_breathAnim.value * 0.035);
+          final tapScale = _tapAnim.value;
+
+          return Transform.scale(
+            scale: breathScale * tapScale,
             child: SizedBox(
-              width: widget.size,
-              height: widget.size,
+              width: size,
+              height: size * 1.1,
               child: CustomPaint(
-                painter: MochiPainter(
-                  moodState: mood,
-                  breathValue: _breathAnim.value,
+                painter: _MochiPainter(
+                  mood: mood,
+                  blinkValue: _blinkAnim.value,
+                  eyeOffset: _eyeOffset,
                   showCrown: widget.showCrown,
                 ),
               ),
             ),
           );
-
-          if (thinking) {
-            mochi = mochi
-                .animate(onPlay: (c) => c.repeat())
-                .rotate(duration: 600.ms, begin: -0.04, end: 0.04)
-                .then()
-                .rotate(duration: 600.ms, begin: 0.04, end: -0.04);
-          }
-          return mochi;
         },
       ),
     );
   }
 }
 
-// ─── Mochi CustomPainter ──────────────────────────────────────────────────
+// ═════════════════════════════════════════════════════════════════════════════
+// MOCHI CUSTOM PAINTER — The visual heart
+// ═════════════════════════════════════════════════════════════════════════════
 
-class MochiPainter extends CustomPainter {
-  final MochiMoodState moodState;
-  final double breathValue;
+class _MochiPainter extends CustomPainter {
+  final MochiMoodState mood;
+  final double blinkValue; // 1.0 = open, 0.0 = closed
+  final Offset eyeOffset;
   final bool showCrown;
-  const MochiPainter({required this.moodState, required this.breathValue, this.showCrown = false});
+
+  _MochiPainter({
+    required this.mood,
+    required this.blinkValue,
+    required this.eyeOffset,
+    required this.showCrown,
+  });
 
   @override
   void paint(Canvas canvas, Size size) {
-    final w = size.width, h = size.height;
-    final cx = w * 0.5;
+    final cx = size.width / 2;
+    final cy = size.height * 0.52;
+    final bodyR = size.width * 0.36;
 
-    final bs = 1.0 + breathValue * 0.03;
-    canvas.save();
-    canvas.translate(cx, h * 0.5);
-    canvas.scale(bs, bs);
-    canvas.translate(-cx, -h * 0.5);
+    // ── Ambient glow ─────────────────────────────────────────────────────
+    final glowPaint = Paint()
+      ..color = mood.glowColor
+      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 30);
+    canvas.drawCircle(Offset(cx, cy + bodyR * 0.15), bodyR * 1.1, glowPaint);
 
-    final bodyColor = moodState.bodyColor;
-    final paint = Paint()..color = bodyColor;
-    final darkPaint = Paint()..color = const Color(0xFF1E1040);
-    final nosePaint = Paint()..color = const Color(0xFF4A2D7A).withValues(alpha: 0.85);
-
-    final headCy = h * 0.40;
-    final headR = w * 0.295;
-    final bellyCy = h * 0.70;
-    final bellyR = w * 0.225;
-    final earR = w * 0.095;
-    final leftEar = Offset(cx - headR * 0.67, headCy - headR * 0.73);
-    final rightEar = Offset(cx + headR * 0.67, headCy - headR * 0.73);
-
-    // Glow for Thriving — three layered blur rings
-    if (moodState == MochiMoodState.thriving) {
-      canvas.drawCircle(
-          Offset(cx, headCy), headR * 1.70,
-          Paint()
-            ..color = bodyColor.withValues(alpha: 0.08)
-            ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 32));
-      canvas.drawCircle(
-          Offset(cx, headCy), headR * 1.50,
-          Paint()
-            ..color = bodyColor.withValues(alpha: 0.13)
-            ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 20));
-      canvas.drawCircle(
-          Offset(cx, headCy), headR * 1.28,
-          Paint()
-            ..color = bodyColor.withValues(alpha: 0.20)
-            ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 10));
-    }
-
-    // Belly
-    canvas.drawCircle(Offset(cx, bellyCy), bellyR, paint);
-    canvas.drawCircle(
-        Offset(cx - bellyR * 0.22, bellyCy - bellyR * 0.22),
-        bellyR * 0.48,
-        Paint()..color = Colors.white.withValues(alpha: 0.12));
-
-    // Head
-    canvas.drawCircle(Offset(cx, headCy), headR, paint);
-    canvas.drawCircle(
-        Offset(cx - headR * 0.30, headCy - headR * 0.30),
-        headR * 0.38,
-        Paint()..color = Colors.white.withValues(alpha: 0.10));
-
-    // Ears
-    final innerEarColor = moodState == MochiMoodState.thriving
-        ? const Color(0xFFFFCB8E)
-        : Color.lerp(bodyColor, Colors.white, 0.2)!;
-    canvas.drawCircle(leftEar, earR, paint);
-    canvas.drawCircle(rightEar, earR, paint);
-    canvas.drawCircle(leftEar, earR * 0.58, Paint()..color = innerEarColor);
-    canvas.drawCircle(rightEar, earR * 0.58, Paint()..color = innerEarColor);
-
-    // Eyes
-    final eyeY = headCy - headR * 0.04;
-    final leftX = cx - headR * 0.305;
-    final rightX = cx + headR * 0.305;
-    final eyeR = headR * 0.115;
-    _drawEyes(canvas, leftX, rightX, eyeY, eyeR, darkPaint, bodyColor);
-
-    // Nose
+    // ── Shadow ───────────────────────────────────────────────────────────
+    final shadowPaint = Paint()
+      ..color = const Color(0x15000000)
+      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 10);
     canvas.drawOval(
       Rect.fromCenter(
-          center: Offset(cx, headCy + headR * 0.16),
-          width: eyeR * 2.2,
-          height: eyeR * 1.4),
+        center: Offset(cx, cy + bodyR + 8),
+        width: bodyR * 1.3,
+        height: 12,
+      ),
+      shadowPaint,
+    );
+
+    // ── Body ─────────────────────────────────────────────────────────────
+    final bodyGradient = RadialGradient(
+      center: const Alignment(-0.3, -0.4),
+      radius: 1.2,
+      colors: [
+        _lighten(mood.bodyColor, 0.15),
+        mood.bodyColor,
+        _darken(mood.bodyColor, 0.1),
+      ],
+    );
+    final bodyPaint = Paint()
+      ..shader = bodyGradient.createShader(
+        Rect.fromCircle(center: Offset(cx, cy), radius: bodyR),
+      );
+    canvas.drawCircle(Offset(cx, cy), bodyR, bodyPaint);
+
+    // ── Belly patch ──────────────────────────────────────────────────────
+    final bellyPaint = Paint()..color = Colors.white.withOpacity(0.25);
+    canvas.drawOval(
+      Rect.fromCenter(
+        center: Offset(cx, cy + bodyR * 0.2),
+        width: bodyR * 0.9,
+        height: bodyR * 0.7,
+      ),
+      bellyPaint,
+    );
+
+    // ── Ears ─────────────────────────────────────────────────────────────
+    _drawEar(canvas, cx - bodyR * 0.62, cy - bodyR * 0.72, bodyR * 0.3,
+        mood.bodyColor, -0.2);
+    _drawEar(canvas, cx + bodyR * 0.62, cy - bodyR * 0.72, bodyR * 0.3,
+        mood.bodyColor, 0.2);
+
+    // ── Eyes ─────────────────────────────────────────────────────────────
+    final eyeY = cy - bodyR * 0.12;
+    final eyeSpacing = bodyR * 0.32;
+    _drawEye(canvas, cx - eyeSpacing + eyeOffset.dx, eyeY + eyeOffset.dy,
+        bodyR * 0.12, blinkValue, mood);
+    _drawEye(canvas, cx + eyeSpacing + eyeOffset.dx, eyeY + eyeOffset.dy,
+        bodyR * 0.12, blinkValue, mood);
+
+    // ── Blush marks ──────────────────────────────────────────────────────
+    final blushPaint = Paint()
+      ..color = const Color(0x30FF8A80)
+      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 6);
+    canvas.drawOval(
+      Rect.fromCenter(
+          center: Offset(cx - bodyR * 0.48, cy + bodyR * 0.05),
+          width: bodyR * 0.22,
+          height: bodyR * 0.13),
+      blushPaint,
+    );
+    canvas.drawOval(
+      Rect.fromCenter(
+          center: Offset(cx + bodyR * 0.48, cy + bodyR * 0.05),
+          width: bodyR * 0.22,
+          height: bodyR * 0.13),
+      blushPaint,
+    );
+
+    // ── Nose ─────────────────────────────────────────────────────────────
+    final nosePaint = Paint()..color = _darken(mood.bodyColor, 0.25);
+    canvas.drawOval(
+      Rect.fromCenter(
+          center: Offset(cx, cy + bodyR * 0.08),
+          width: bodyR * 0.09,
+          height: bodyR * 0.06),
       nosePaint,
     );
 
-    // Mouth
-    _drawMouth(canvas, cx, headCy, headR, darkPaint);
+    // ── Mouth ────────────────────────────────────────────────────────────
+    _drawMouth(canvas, cx, cy + bodyR * 0.18, bodyR, mood);
 
-    // Leaf crown (intro-only)
+    // ── Arms ─────────────────────────────────────────────────────────────
+    _drawArm(canvas, cx - bodyR * 0.85, cy + bodyR * 0.2, bodyR * 0.2,
+        mood.bodyColor, true);
+    _drawArm(canvas, cx + bodyR * 0.85, cy + bodyR * 0.2, bodyR * 0.2,
+        mood.bodyColor, false);
+
+    // ── Feet ─────────────────────────────────────────────────────────────
+    final footPaint = Paint()..color = _darken(mood.bodyColor, 0.08);
+    canvas.drawOval(
+      Rect.fromCenter(
+          center: Offset(cx - bodyR * 0.35, cy + bodyR * 0.88),
+          width: bodyR * 0.3,
+          height: bodyR * 0.18),
+      footPaint,
+    );
+    canvas.drawOval(
+      Rect.fromCenter(
+          center: Offset(cx + bodyR * 0.35, cy + bodyR * 0.88),
+          width: bodyR * 0.3,
+          height: bodyR * 0.18),
+      footPaint,
+    );
+
+    // ── Leaf crown ───────────────────────────────────────────────────────
     if (showCrown) {
-      _drawLeafCrown(canvas, cx, headCy, headR);
+      _drawLeafCrown(canvas, cx, cy - bodyR * 0.82, bodyR * 0.35);
     }
+  }
 
+  void _drawEar(
+      Canvas canvas, double x, double y, double r, Color color, double tilt) {
+    canvas.save();
+    canvas.translate(x, y);
+    canvas.rotate(tilt);
+    // Outer ear
+    canvas.drawCircle(Offset.zero, r, Paint()..color = color);
+    // Inner ear
+    canvas.drawCircle(Offset(0, r * 0.1), r * 0.6,
+        Paint()..color = Color.lerp(color, const Color(0xFFFFB4AB), 0.35)!);
     canvas.restore();
   }
 
-  void _drawLeafCrown(Canvas canvas, double cx, double headCy, double headR) {
-    final leafPaint = Paint()..color = const Color(0xFF5BBF8A);
-    // Left leaf — bezier teardrop
-    final leftPath = Path();
-    final lx = cx - headR * 0.28;
-    final ty = headCy - headR * 1.05;
-    leftPath.moveTo(lx, ty);
-    leftPath.quadraticBezierTo(lx - headR * 0.22, ty - headR * 0.28, lx, ty - headR * 0.42);
-    leftPath.quadraticBezierTo(lx + headR * 0.10, ty - headR * 0.28, lx, ty);
-    canvas.drawPath(leftPath, leafPaint);
+  void _drawEye(Canvas canvas, double x, double y, double r, double blink,
+      MochiMoodState mood) {
+    final eyeHeight = r * 2 * blink;
+    if (eyeHeight < 1) {
+      // Closed eye — draw a line
+      final linePaint = Paint()
+        ..color = const Color(0xFF2A2A2A)
+        ..strokeWidth = 2
+        ..strokeCap = StrokeCap.round;
+      canvas.drawLine(
+          Offset(x - r * 0.7, y), Offset(x + r * 0.7, y), linePaint);
+      return;
+    }
 
-    // Right leaf
-    final rightPath = Path();
-    final rx = cx + headR * 0.28;
-    rightPath.moveTo(rx, ty);
-    rightPath.quadraticBezierTo(rx + headR * 0.22, ty - headR * 0.28, rx, ty - headR * 0.42);
-    rightPath.quadraticBezierTo(rx - headR * 0.10, ty - headR * 0.28, rx, ty);
-    canvas.drawPath(rightPath, leafPaint);
-  }
+    // Eye white
+    canvas.drawOval(
+      Rect.fromCenter(center: Offset(x, y), width: r * 2, height: eyeHeight),
+      Paint()..color = Colors.white,
+    );
 
-  void _drawEyes(Canvas canvas, double lx, double rx, double y, double r,
-      Paint dark, Color bodyColor) {
-    final shine = Paint()..color = Colors.white.withValues(alpha: 0.88);
-    switch (moodState) {
-      case MochiMoodState.thriving:
-        canvas.drawCircle(Offset(lx, y), r * 1.12, dark);
-        canvas.drawCircle(Offset(rx, y), r * 1.12, dark);
-        canvas.drawCircle(Offset(lx + r * 0.35, y - r * 0.35), r * 0.38, shine);
-        canvas.drawCircle(Offset(rx + r * 0.35, y - r * 0.35), r * 0.38, shine);
+    // Pupil
+    final pupilR = r * 0.55;
+    canvas.drawCircle(
+      Offset(x, y),
+      pupilR,
+      Paint()..color = const Color(0xFF2A2A2A),
+    );
 
-      case MochiMoodState.balanced:
-        canvas.drawCircle(Offset(lx, y), r, dark);
-        canvas.drawCircle(Offset(rx, y), r, dark);
-        canvas.drawCircle(Offset(lx + r * 0.28, y - r * 0.28), r * 0.32, shine);
-        canvas.drawCircle(Offset(rx + r * 0.28, y - r * 0.28), r * 0.32, shine);
+    // Eye shine
+    canvas.drawCircle(
+      Offset(x - pupilR * 0.35, y - pupilR * 0.35),
+      pupilR * 0.35,
+      Paint()..color = Colors.white,
+    );
 
-      case MochiMoodState.drifting:
-        canvas.drawCircle(Offset(lx, y), r, dark);
-        canvas.drawCircle(Offset(rx, y), r, dark);
-        final lidPaint = Paint()..color = bodyColor;
-        canvas.drawRect(
-            Rect.fromLTWH(lx - r * 1.1, y - r * 1.1, r * 2.2, r * 1.05), lidPaint);
-        canvas.drawRect(
-            Rect.fromLTWH(rx - r * 1.1, y - r * 1.1, r * 2.2, r * 1.05), lidPaint);
-
-      case MochiMoodState.struggling:
-        canvas.drawCircle(Offset(lx, y + r * 0.4), r * 0.82, dark);
-        canvas.drawCircle(Offset(rx, y + r * 0.4), r * 0.82, dark);
-        final tearPaint = Paint()..color = const Color(0xFF88AACC).withValues(alpha: 0.6);
-        canvas.drawOval(
-            Rect.fromCenter(
-                center: Offset(lx, y + r * 1.6), width: r * 0.6, height: r * 0.9),
-            tearPaint);
+    // Mood-specific eye detail
+    if (mood == MochiMoodState.thriving) {
+      // Sparkly eyes — extra small shine
+      canvas.drawCircle(
+        Offset(x + pupilR * 0.25, y + pupilR * 0.15),
+        pupilR * 0.15,
+        Paint()..color = Colors.white.withOpacity(0.7),
+      );
+    }
+    if (mood == MochiMoodState.drifting || mood == MochiMoodState.struggling) {
+      // Half-lidded — draw eyelid
+      final lidPaint = Paint()..color = mood.bodyColor;
+      canvas.drawArc(
+        Rect.fromCenter(
+            center: Offset(x, y), width: r * 2.1, height: eyeHeight + 2),
+        pi,
+        pi,
+        true,
+        lidPaint,
+      );
+      // Redraw lower half of eye
+      canvas.drawArc(
+        Rect.fromCenter(
+            center: Offset(x, y + r * 0.15),
+            width: r * 1.8,
+            height: eyeHeight * 0.6),
+        0,
+        pi,
+        true,
+        Paint()..color = Colors.white,
+      );
+      canvas.drawCircle(
+        Offset(x, y + r * 0.15),
+        pupilR * 0.5,
+        Paint()..color = const Color(0xFF2A2A2A),
+      );
+      canvas.drawCircle(
+        Offset(x - pupilR * 0.2, y + r * 0.05),
+        pupilR * 0.2,
+        Paint()..color = Colors.white,
+      );
     }
   }
 
-  void _drawMouth(Canvas canvas, double cx, double headCy, double headR, Paint dark) {
-    final mouthPaint = Paint()
-      ..color = dark.color
+  void _drawMouth(
+      Canvas canvas, double cx, double y, double bodyR, MochiMoodState mood) {
+    final paint = Paint()
+      ..color = const Color(0xFF2A2A2A)
+      ..strokeWidth = 2
       ..style = PaintingStyle.stroke
-      ..strokeWidth = headR * 0.065
       ..strokeCap = StrokeCap.round;
-    final my = headCy + headR * 0.37;
-    final mw = headR * 0.33;
-    final path = Path();
-    switch (moodState) {
+
+    final w = bodyR * 0.22;
+
+    switch (mood) {
       case MochiMoodState.thriving:
-        path.moveTo(cx - mw, my);
-        path.quadraticBezierTo(cx, my + headR * 0.22, cx + mw, my);
+        // Big happy smile
+        final path = Path()
+          ..moveTo(cx - w, y)
+          ..quadraticBezierTo(cx, y + w * 0.8, cx + w, y);
+        canvas.drawPath(path, paint);
+        break;
       case MochiMoodState.balanced:
-        path.moveTo(cx - mw * 0.8, my);
-        path.quadraticBezierTo(cx, my + headR * 0.13, cx + mw * 0.8, my);
+        // Gentle smile
+        final path = Path()
+          ..moveTo(cx - w * 0.7, y)
+          ..quadraticBezierTo(cx, y + w * 0.45, cx + w * 0.7, y);
+        canvas.drawPath(path, paint);
+        break;
       case MochiMoodState.drifting:
-        path.moveTo(cx - mw * 0.55, my);
-        path.quadraticBezierTo(cx, my + headR * 0.04, cx + mw * 0.55, my);
+        // Neutral/slightly down
+        canvas.drawLine(
+            Offset(cx - w * 0.5, y), Offset(cx + w * 0.5, y), paint);
+        break;
       case MochiMoodState.struggling:
-        path.moveTo(cx - mw * 0.45, my + headR * 0.06);
-        path.quadraticBezierTo(cx, my - headR * 0.06, cx + mw * 0.45, my + headR * 0.06);
+        // Slight frown
+        final path = Path()
+          ..moveTo(cx - w * 0.6, y)
+          ..quadraticBezierTo(cx, y - w * 0.3, cx + w * 0.6, y);
+        canvas.drawPath(path, paint);
+        break;
     }
-    canvas.drawPath(path, mouthPaint);
+  }
+
+  void _drawArm(
+      Canvas canvas, double x, double y, double r, Color color, bool isLeft) {
+    canvas.save();
+    canvas.translate(x, y);
+    canvas.rotate(isLeft ? -0.3 : 0.3);
+    canvas.drawOval(
+      Rect.fromCenter(center: Offset.zero, width: r, height: r * 1.6),
+      Paint()..color = _darken(color, 0.05),
+    );
+    canvas.restore();
+  }
+
+  void _drawLeafCrown(Canvas canvas, double cx, double y, double size) {
+    final leafPaint = Paint()..color = AppTheme.primaryLight;
+    // Center leaf
+    _drawLeaf(canvas, cx, y - size * 0.2, size * 0.5, 0, leafPaint);
+    // Left leaf
+    _drawLeaf(canvas, cx - size * 0.4, y, size * 0.4, -0.4, leafPaint);
+    // Right leaf
+    _drawLeaf(canvas, cx + size * 0.4, y, size * 0.4, 0.4, leafPaint);
+  }
+
+  void _drawLeaf(Canvas canvas, double x, double y, double size, double angle,
+      Paint paint) {
+    canvas.save();
+    canvas.translate(x, y);
+    canvas.rotate(angle);
+    final path = Path()
+      ..moveTo(0, -size)
+      ..quadraticBezierTo(size * 0.5, -size * 0.3, 0, size * 0.2)
+      ..quadraticBezierTo(-size * 0.5, -size * 0.3, 0, -size);
+    canvas.drawPath(path, paint);
+    canvas.restore();
+  }
+
+  Color _lighten(Color c, double amount) {
+    final hsl = HSLColor.fromColor(c);
+    return hsl
+        .withLightness((hsl.lightness + amount).clamp(0.0, 1.0))
+        .toColor();
+  }
+
+  Color _darken(Color c, double amount) {
+    final hsl = HSLColor.fromColor(c);
+    return hsl
+        .withLightness((hsl.lightness - amount).clamp(0.0, 1.0))
+        .toColor();
   }
 
   @override
-  bool shouldRepaint(MochiPainter old) =>
-      old.moodState != moodState ||
-      old.breathValue != breathValue ||
+  bool shouldRepaint(covariant _MochiPainter old) =>
+      old.mood != mood ||
+      old.blinkValue != blinkValue ||
+      old.eyeOffset != eyeOffset ||
       old.showCrown != showCrown;
 }

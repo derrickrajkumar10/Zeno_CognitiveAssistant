@@ -1,239 +1,234 @@
+import 'dart:ui';
 import 'package:flutter/material.dart' hide Badge;
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:zeno/mock_data.dart';
-import 'package:zeno/models/user_profile.dart';
 import 'package:zeno/providers/app_state_provider.dart';
 import 'package:zeno/theme/app_theme.dart';
+import 'package:zeno/widgets/glass_card.dart';
+import 'package:zeno/widgets/mochi_widget.dart';
 
 class ProfileScreen extends ConsumerWidget {
   const ProfileScreen({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final user = ref.watch(userProvider);
-    final xpProgress = user.xp / user.xpToNextLevel;
+    final state = ref.watch(appStateProvider);
+    final user = state.user;
+    final pad = MediaQuery.of(context).padding;
 
-    return Scaffold(
-      backgroundColor: AppTheme.backgroundProfile,
-      body: SafeArea(
-        child: Stack(
-          children: [
-            // Floating decoratives
-            Positioned(
-              top: 30,
-              right: 20,
-              child: Transform.rotate(
-                angle: 0.2,
-                child: const Opacity(
-                  opacity: 0.6,
-                  child: Text('⭐', style: TextStyle(fontSize: 26)),
-                ),
-              ),
-            ),
-            Positioned(
-              top: 140,
-              left: 16,
-              child: Transform.rotate(
-                angle: -0.3,
-                child: const Opacity(
-                  opacity: 0.6,
-                  child: Text('🌿', style: TextStyle(fontSize: 24)),
-                ),
-              ),
-            ),
-            Positioned(
-              bottom: 180,
-              right: 24,
-              child: Transform.rotate(
-                angle: 0.35,
-                child: const Opacity(
-                  opacity: 0.6,
-                  child: Text('🏆', style: TextStyle(fontSize: 28)),
-                ),
-              ),
-            ),
-
-            // Main content
-            SingleChildScrollView(
-              padding: const EdgeInsets.fromLTRB(24, 24, 24, 100),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Hero name
-                  Text(
-                    user.name,
-                    style: GoogleFonts.nunito(
-                      fontWeight: FontWeight.w900,
-                      fontSize: 40,
-                      color: AppTheme.textPrimary,
-                      height: 1.05,
-                    ),
+    return SingleChildScrollView(
+      padding: EdgeInsets.only(
+        top: pad.top + AppTheme.lg,
+        left: AppTheme.lg,
+        right: AppTheme.lg,
+        bottom: pad.bottom + 100,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // ── Header ──────────────────────────────────────────────
+          Center(
+            child: Column(
+              children: [
+                const MochiWidget(size: 100, interactive: false),
+                const SizedBox(height: AppTheme.md),
+                Text(user.name, style: AppTheme.displayMedium),
+                const SizedBox(height: 4),
+                Text(
+                  'Level ${user.level}',
+                  style: AppTheme.bodySmall.copyWith(
+                    color: AppTheme.primaryLight,
+                    fontWeight: FontWeight.w600,
                   ),
-                  const SizedBox(height: 4),
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 12, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: AppTheme.selectedGreenTint,
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: Text(
-                      'Level ${user.level} · ${user.xp} / ${user.xpToNextLevel} XP',
-                      style: GoogleFonts.nunito(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w700,
-                        color: AppTheme.selectedGreen,
+                ),
+              ],
+            ),
+          ).animate().fadeIn(duration: 600.ms),
+
+          const SizedBox(height: AppTheme.lg),
+
+          // ── XP progress ─────────────────────────────────────────
+          GlassCard(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text('Experience', style: AppTheme.headlineMed),
+                    Text(
+                      '${user.xp} / ${user.xpToNextLevel} XP',
+                      style: AppTheme.caption.copyWith(
+                        color: AppTheme.primaryLight,
+                        fontWeight: FontWeight.w600,
                       ),
                     ),
+                  ],
+                ),
+                const SizedBox(height: AppTheme.sm),
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(6),
+                  child: LinearProgressIndicator(
+                    value: user.xp / user.xpToNextLevel,
+                    minHeight: 8,
+                    backgroundColor: AppTheme.surfaceGlassDim,
+                    valueColor:
+                        const AlwaysStoppedAnimation(AppTheme.primaryLight),
                   ),
-                  const SizedBox(height: 16),
+                ),
+              ],
+            ),
+          )
+              .animate()
+              .fadeIn(duration: 500.ms, delay: 150.ms)
+              .slideY(begin: 0.05),
 
-                  // XP bar
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(8),
-                    child: TweenAnimationBuilder<double>(
-                      tween: Tween(begin: 0, end: xpProgress),
-                      duration: const Duration(milliseconds: 900),
-                      curve: Curves.easeOutCubic,
-                      builder: (_, val, __) => LinearProgressIndicator(
-                        value: val,
-                        backgroundColor: const Color(0xFFE0D8F0),
-                        valueColor: const AlwaysStoppedAnimation(
-                            AppTheme.selectedGreen),
-                        minHeight: 8,
-                      ),
+          const SizedBox(height: AppTheme.md),
+
+          // ── Stats grid ──────────────────────────────────────────
+          Row(
+            children: [
+              Expanded(
+                child: _StatTile(
+                  icon: Icons.local_fire_department_rounded,
+                  value: '${user.currentStreak}',
+                  label: 'Streak',
+                  color: AppTheme.accent,
+                ),
+              ),
+              const SizedBox(width: AppTheme.sm),
+              Expanded(
+                child: _StatTile(
+                  icon: Icons.check_circle_rounded,
+                  value: '${user.totalQuestsCompleted}',
+                  label: 'Quests',
+                  color: AppTheme.primaryLight,
+                ),
+              ),
+              const SizedBox(width: AppTheme.sm),
+              Expanded(
+                child: _StatTile(
+                  icon: Icons.insights_rounded,
+                  value: user.avgCogniPulse.toStringAsFixed(0),
+                  label: 'Avg CP',
+                  color: AppTheme.info,
+                ),
+              ),
+            ],
+          )
+              .animate()
+              .fadeIn(duration: 500.ms, delay: 250.ms)
+              .slideY(begin: 0.05),
+
+          const SizedBox(height: AppTheme.lg),
+
+          // ── Badges ──────────────────────────────────────────────
+          Text('Badges', style: AppTheme.headlineLarge)
+              .animate()
+              .fadeIn(duration: 500.ms, delay: 350.ms),
+          const SizedBox(height: AppTheme.md),
+          Wrap(
+            spacing: AppTheme.sm,
+            runSpacing: AppTheme.sm,
+            children: user.badges.asMap().entries.map((e) {
+              final badge = e.value;
+              final idx = e.key;
+              return GlassCard(
+                tint: badge.unlocked
+                    ? AppTheme.surfaceGlass
+                    : AppTheme.surfaceGlassDim,
+                borderRadius: AppTheme.cardRadiusSm,
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Opacity(
+                      opacity: badge.unlocked ? 1.0 : 0.4,
+                      child: Text(badge.icon,
+                          style: const TextStyle(fontSize: 20)),
                     ),
-                  ),
-                  const SizedBox(height: 6),
-                  Text(
-                    '${user.xpToNextLevel - user.xp} XP to Level ${user.level + 1}',
-                    style: GoogleFonts.nunito(
-                      fontSize: 12,
-                      color: AppTheme.textSecondary,
-                    ),
-                  ),
-                  const SizedBox(height: 28),
-
-                  // Stats row
-                  Row(children: [
-                    _StatPill(
-                        label: 'Quests',
-                        value: '${user.totalQuestsCompleted}',
-                        emoji: '⚡'),
-                    const SizedBox(width: 10),
-                    _StatPill(
-                        label: 'Streak',
-                        value: '${user.currentStreak}d',
-                        emoji: '🔥'),
-                    const SizedBox(width: 10),
-                    _StatPill(
-                        label: 'Avg',
-                        value: user.avgCogniPulse.toStringAsFixed(0),
-                        emoji: '📊'),
-                  ]),
-                  const SizedBox(height: 28),
-
-                  // Weekly letter
-                  GestureDetector(
-                    onTap: () => _showWeeklyLetter(context),
-                    child: Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.all(18),
-                      decoration: BoxDecoration(
-                        color: AppTheme.selectedGreenTint,
-                        borderRadius: BorderRadius.circular(16),
-                        border: Border.all(
-                            color: AppTheme.selectedGreen.withValues(alpha: 0.3)),
-                      ),
-                      child: Row(children: [
-                        const Text('🐾', style: TextStyle(fontSize: 28)),
-                        const SizedBox(width: 14),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                "This week's letter from Mochi",
-                                style: GoogleFonts.nunito(
-                                  fontWeight: FontWeight.w700,
-                                  fontSize: 15,
-                                  color: AppTheme.textPrimary,
-                                ),
-                              ),
-                              Text(
-                                'Tap to read',
-                                style: GoogleFonts.nunito(
-                                  fontSize: 12,
-                                  color: AppTheme.selectedGreen,
-                                ),
-                              ),
-                            ],
-                          ),
+                    const SizedBox(width: 8),
+                    Flexible(
+                      child: Text(
+                        badge.name,
+                        style: AppTheme.caption.copyWith(
+                          color: badge.unlocked
+                              ? AppTheme.textPrimary
+                              : AppTheme.textTertiary,
+                          fontWeight: badge.unlocked
+                              ? FontWeight.w600
+                              : FontWeight.w400,
                         ),
-                        const Icon(Icons.chevron_right_rounded,
-                            color: AppTheme.textSecondary),
-                      ]),
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 28),
+                  ],
+                ),
+              ).animate().fadeIn(duration: 400.ms, delay: (400 + idx * 60).ms);
+            }).toList(),
+          ),
 
-                  // Badges
-                  Text(
-                    'Badges',
-                    style: GoogleFonts.nunito(
-                      fontWeight: FontWeight.w700,
-                      fontSize: 22,
-                      color: AppTheme.textPrimary,
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  GridView.builder(
-                    shrinkWrap: true,
-                    physics: const NeverScrollableScrollPhysics(),
-                    gridDelegate:
-                        const SliverGridDelegateWithFixedCrossAxisCount(
-                      crossAxisCount: 2,
-                      mainAxisSpacing: 10,
-                      crossAxisSpacing: 10,
-                      childAspectRatio: 2.8,
-                    ),
-                    itemCount: user.badges.length,
-                    itemBuilder: (_, i) => _BadgeCard(badge: user.badges[i]),
-                  ),
-                  const SizedBox(height: 28),
+          const SizedBox(height: AppTheme.lg),
 
-                  // Settings
-                  Text(
-                    'Settings',
-                    style: GoogleFonts.nunito(
-                      fontWeight: FontWeight.w700,
-                      fontSize: 22,
-                      color: AppTheme.textPrimary,
-                    ),
+          // ── Weekly Letter ───────────────────────────────────────
+          GlassCard(
+            onTap: () => _showWeeklyLetter(context),
+            tint: AppTheme.accentSoft.withOpacity(0.3),
+            child: Row(
+              children: [
+                Container(
+                  width: 44,
+                  height: 44,
+                  decoration: BoxDecoration(
+                    color: AppTheme.accent.withOpacity(0.15),
+                    borderRadius: BorderRadius.circular(12),
                   ),
-                  const SizedBox(height: 12),
-                  _SettingsRow(
-                      emoji: '🔒',
-                      label: 'Privacy',
-                      onTap: () => _comingSoon(context)),
-                  _SettingsRow(
-                      emoji: '🔔',
-                      label: 'Notifications',
-                      onTap: () => _comingSoon(context)),
-                  _SettingsRow(
-                      emoji: 'ℹ️',
-                      label: 'About ZENO',
-                      onTap: () => _comingSoon(context)),
-                ],
-              )
-                  .animate()
-                  .fadeIn(duration: 300.ms, curve: Curves.easeOut)
-                  .slideY(begin: 0.06, end: 0, duration: 300.ms, curve: Curves.easeOut),
+                  alignment: Alignment.center,
+                  child: const Icon(Icons.mail_rounded,
+                      color: AppTheme.accent, size: 22),
+                ),
+                const SizedBox(width: AppTheme.md),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('Mochi\'s Weekly Letter',
+                          style: AppTheme.headlineMed),
+                      Text('Tap to read', style: AppTheme.bodySmall),
+                    ],
+                  ),
+                ),
+                const Icon(Icons.chevron_right_rounded,
+                    color: AppTheme.textTertiary),
+              ],
             ),
-          ],
-        ),
+          )
+              .animate()
+              .fadeIn(duration: 500.ms, delay: 600.ms)
+              .slideY(begin: 0.05),
+
+          const SizedBox(height: AppTheme.lg),
+
+          // ── Settings ────────────────────────────────────────────
+          Text('Settings', style: AppTheme.headlineLarge)
+              .animate()
+              .fadeIn(duration: 500.ms, delay: 700.ms),
+          const SizedBox(height: AppTheme.md),
+
+          _SettingsTile(
+            icon: Icons.notifications_rounded,
+            label: 'Notifications',
+          ).animate().fadeIn(duration: 400.ms, delay: 750.ms),
+          _SettingsTile(
+            icon: Icons.palette_rounded,
+            label: 'Appearance',
+          ).animate().fadeIn(duration: 400.ms, delay: 800.ms),
+          _SettingsTile(
+            icon: Icons.info_rounded,
+            label: 'About ZENO',
+          ).animate().fadeIn(duration: 400.ms, delay: 850.ms),
+        ],
       ),
     );
   }
@@ -244,172 +239,107 @@ class ProfileScreen extends ConsumerWidget {
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (_) => DraggableScrollableSheet(
-        initialChildSize: 0.75,
-        maxChildSize: 0.92,
-        builder: (_, ctrl) => Container(
-          decoration: const BoxDecoration(
-            color: AppTheme.cardSurface,
-            borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
-          ),
-          padding: const EdgeInsets.all(24),
-          child: ListView(controller: ctrl, children: [
-            Center(
-              child: Container(
-                width: 36,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: const Color(0xFFD0CDE0),
-                  borderRadius: BorderRadius.circular(2),
-                ),
+        initialChildSize: 0.7,
+        maxChildSize: 0.9,
+        minChildSize: 0.4,
+        builder: (_, controller) => ClipRRect(
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+          child: BackdropFilter(
+            filter: ImageFilter.blur(sigmaX: 24, sigmaY: 24),
+            child: Container(
+              decoration: BoxDecoration(
+                color: AppTheme.surfaceGlass,
+                borderRadius:
+                    const BorderRadius.vertical(top: Radius.circular(28)),
+                border: Border.all(color: AppTheme.surfaceBorder, width: 0.5),
+              ),
+              child: ListView(
+                controller: controller,
+                padding: const EdgeInsets.all(AppTheme.lg),
+                children: [
+                  Center(
+                    child: Container(
+                      width: 36,
+                      height: 4,
+                      decoration: BoxDecoration(
+                        color: AppTheme.textTertiary.withOpacity(0.3),
+                        borderRadius: BorderRadius.circular(2),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: AppTheme.lg),
+                  Text('Mochi\'s Letter', style: AppTheme.displaySmall),
+                  const SizedBox(height: AppTheme.lg),
+                  Text(
+                    MockData.currentWeeklyLetter,
+                    style: AppTheme.bodyLarge.copyWith(height: 1.7),
+                  ),
+                ],
               ),
             ),
-            const SizedBox(height: 20),
-            Text(
-              'A letter from Mochi 🐾',
-              style: GoogleFonts.nunito(
-                fontSize: 20,
-                fontWeight: FontWeight.w800,
-                color: AppTheme.textPrimary,
-              ),
-            ),
-            const SizedBox(height: 16),
-            Text(
-              MockData.currentWeeklyLetter,
-              style: GoogleFonts.nunito(
-                fontSize: 14.5,
-                height: 1.8,
-                color: AppTheme.textPrimary,
-              ),
-            ),
-          ]),
-        ),
-      ),
-    );
-  }
-
-  void _comingSoon(BuildContext context) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: const Text('Coming soon'),
-        backgroundColor: AppTheme.cardSurface,
-        behavior: SnackBarBehavior.floating,
-        shape:
-            RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      ),
-    );
-  }
-}
-
-class _StatPill extends StatelessWidget {
-  final String label, value, emoji;
-  const _StatPill(
-      {required this.label, required this.value, required this.emoji});
-
-  @override
-  Widget build(BuildContext context) {
-    return Expanded(
-      child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 12),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(16),
-        ),
-        child: Column(children: [
-          Text(emoji, style: const TextStyle(fontSize: 20)),
-          const SizedBox(height: 6),
-          Text(value,
-              style: GoogleFonts.nunito(
-                  fontSize: 20,
-                  fontWeight: FontWeight.w800,
-                  color: AppTheme.textPrimary)),
-          Text(label,
-              style: GoogleFonts.nunito(
-                  fontSize: 11, color: AppTheme.textSecondary)),
-        ]),
-      ),
-    );
-  }
-}
-
-class _BadgeCard extends StatelessWidget {
-  final Badge badge;
-  const _BadgeCard({required this.badge});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-      decoration: BoxDecoration(
-        color: badge.unlocked ? Colors.white : Colors.white.withValues(alpha: 0.5),
-        borderRadius: BorderRadius.circular(16),
-      ),
-      child: Row(children: [
-        Text(badge.icon, style: const TextStyle(fontSize: 20)),
-        const SizedBox(width: 8),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Text(
-                badge.name,
-                style: GoogleFonts.nunito(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w700,
-                  color: badge.unlocked
-                      ? AppTheme.textPrimary
-                      : AppTheme.textSecondary,
-                ),
-                overflow: TextOverflow.ellipsis,
-              ),
-              if (!badge.unlocked)
-                Row(children: [
-                  const Icon(Icons.lock_rounded,
-                      size: 9, color: AppTheme.textSecondary),
-                  const SizedBox(width: 2),
-                  Text('Locked',
-                      style: GoogleFonts.nunito(
-                          fontSize: 9, color: AppTheme.textSecondary)),
-                ]),
-            ],
           ),
         ),
-      ]),
+      ),
     );
   }
 }
 
-class _SettingsRow extends StatelessWidget {
-  final String emoji;
+class _StatTile extends StatelessWidget {
+  final IconData icon;
+  final String value;
   final String label;
-  final VoidCallback onTap;
-  const _SettingsRow(
-      {required this.emoji, required this.label, required this.onTap});
+  final Color color;
+
+  const _StatTile({
+    required this.icon,
+    required this.value,
+    required this.label,
+    required this.color,
+  });
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        margin: const EdgeInsets.only(bottom: 8),
-        height: 60,
-        padding: const EdgeInsets.symmetric(horizontal: 18),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(16),
+    return GlassCard(
+      padding: const EdgeInsets.all(AppTheme.md),
+      child: Column(
+        children: [
+          Icon(icon, color: color, size: 22),
+          const SizedBox(height: 6),
+          Text(value, style: AppTheme.displaySmall),
+          const SizedBox(height: 2),
+          Text(label, style: AppTheme.labelSmall),
+        ],
+      ),
+    );
+  }
+}
+
+class _SettingsTile extends StatelessWidget {
+  final IconData icon;
+  final String label;
+
+  const _SettingsTile({
+    required this.icon,
+    required this.label,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: AppTheme.sm),
+      child: GlassCard(
+        padding:
+            const EdgeInsets.symmetric(horizontal: AppTheme.md, vertical: 14),
+        child: Row(
+          children: [
+            Icon(icon, color: AppTheme.textSecondary, size: 20),
+            const SizedBox(width: AppTheme.md),
+            Text(label, style: AppTheme.bodyMedium),
+            const Spacer(),
+            const Icon(Icons.chevron_right_rounded,
+                color: AppTheme.textTertiary, size: 20),
+          ],
         ),
-        child: Row(children: [
-          Text(emoji, style: const TextStyle(fontSize: 20)),
-          const SizedBox(width: 14),
-          Expanded(
-              child: Text(label,
-                  style: GoogleFonts.nunito(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
-                      color: AppTheme.textPrimary))),
-          const Icon(Icons.chevron_right_rounded,
-              color: AppTheme.textSecondary, size: 18),
-        ]),
       ),
     );
   }

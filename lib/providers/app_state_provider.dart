@@ -20,6 +20,7 @@ class AppState {
   final bool onboardingComplete;
   final bool isOllamaLive;
   final int totalXpToday;
+  final int dialogueCycleCount;
 
   const AppState({
     required this.user,
@@ -29,6 +30,7 @@ class AppState {
     required this.onboardingComplete,
     required this.isOllamaLive,
     required this.totalXpToday,
+    this.dialogueCycleCount = 0,
   });
 
   AppState copyWith({
@@ -39,6 +41,7 @@ class AppState {
     bool? onboardingComplete,
     bool? isOllamaLive,
     int? totalXpToday,
+    int? dialogueCycleCount,
   }) =>
       AppState(
         user: user ?? this.user,
@@ -48,6 +51,7 @@ class AppState {
         onboardingComplete: onboardingComplete ?? this.onboardingComplete,
         isOllamaLive: isOllamaLive ?? this.isOllamaLive,
         totalXpToday: totalXpToday ?? this.totalXpToday,
+        dialogueCycleCount: dialogueCycleCount ?? this.dialogueCycleCount,
       );
 }
 
@@ -104,6 +108,10 @@ class AppStateNotifier extends StateNotifier<AppState> {
       badges: state.user.badges,
     );
     state = state.copyWith(user: updated);
+  }
+
+  void cycleDialogue() {
+    state = state.copyWith(dialogueCycleCount: state.dialogueCycleCount + 1);
   }
 }
 
