@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
@@ -898,6 +900,7 @@ class _MeetMochiPageState extends State<MeetMochiPage>
 
   bool _showContent = false;
   bool _videoInitialized = false;
+  Timer? _revealFallback;
 
   @override
   void initState() {
@@ -908,25 +911,35 @@ class _MeetMochiPageState extends State<MeetMochiPage>
         .animate(
             CurvedAnimation(parent: _textCtrl, curve: Curves.easeOutCubic));
 
-    _videoCtrl = VideoPlayerController.asset('assets/videos/meet_mochi.mp4')
-      ..initialize().then((_) {
-        if (!mounted) return;
-        setState(() => _videoInitialized = true);
-        _videoCtrl.setLooping(true);
-        _videoCtrl.play();
+    // The finish button lives in the revealed content, so it must appear even
+    // if the video is slow or can't play on this device.
+    _revealFallback = Timer(const Duration(seconds: 4), _revealContent);
 
-        // Show text after a short delay once video starts
-        Future.delayed(1200.ms, () {
-          if (mounted) {
-            setState(() => _showContent = true);
-            _textCtrl.forward();
-          }
-        });
-      });
+    _videoCtrl = VideoPlayerController.asset('assets/videos/meet_mochi.mp4');
+    _videoCtrl.initialize().then((_) {
+      if (!mounted) return;
+      setState(() => _videoInitialized = true);
+      _videoCtrl.setLooping(true);
+      _videoCtrl.play();
+
+      // Show text after a short delay once video starts
+      Future.delayed(1200.ms, _revealContent);
+    }).catchError((Object error) {
+      debugPrint('Meet Mochi video unavailable: $error');
+      _revealContent();
+    });
+  }
+
+  void _revealContent() {
+    _revealFallback?.cancel();
+    if (!mounted || _showContent) return;
+    setState(() => _showContent = true);
+    _textCtrl.forward();
   }
 
   @override
   void dispose() {
+    _revealFallback?.cancel();
     _videoCtrl.dispose();
     _textCtrl.dispose();
     super.dispose();
@@ -951,7 +964,12 @@ class _MeetMochiPageState extends State<MeetMochiPage>
             ),
           )
         else
-          Container(color: AppTheme.backgroundDeep), // Fallback while loading
+          // Fallback while loading, or if the video can't play.
+          Container(
+            color: AppTheme.backgroundDeep,
+            alignment: const Alignment(0, -0.45),
+            child: const MochiWidget(size: 200, interactive: false),
+          ),
 
         // Subtle gradient overlay to ensure text is readable against the video
         Container(
