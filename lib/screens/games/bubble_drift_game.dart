@@ -61,7 +61,10 @@ class _BubbleDriftPlayState extends State<_BubbleDriftPlay>
       duration: const Duration(seconds: 1),
     )..addListener(_update);
     _ticker.repeat();
-    _spawnBubble();
+    // MediaQuery can't be read until initState has finished.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _spawnBubble();
+    });
   }
 
   @override
@@ -72,7 +75,7 @@ class _BubbleDriftPlayState extends State<_BubbleDriftPlay>
 
   void _spawnBubble() {
     if (_gameOver) return;
-    final size = MediaQuery.of(context).size;
+    final size = MediaQuery.sizeOf(context);
     final radius = 20.0 + _rng.nextDouble() * 20;
     final bubble = _Bubble(
       x: radius + _rng.nextDouble() * (size.width - radius * 2),
