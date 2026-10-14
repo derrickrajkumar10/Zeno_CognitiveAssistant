@@ -21,7 +21,7 @@ class ScanScreen extends ConsumerStatefulWidget {
 }
 
 class _ScanScreenState extends ConsumerState<ScanScreen>
-    with TickerProviderStateMixin {
+    with TickerProviderStateMixin, WidgetsBindingObserver {
   static const _scanSeconds = 5;
 
   final FaceScanAnalyzer _analyzer = FaceScanAnalyzer();
@@ -49,6 +49,7 @@ class _ScanScreenState extends ConsumerState<ScanScreen>
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _pulseCtrl = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 1500),
@@ -57,11 +58,27 @@ class _ScanScreenState extends ConsumerState<ScanScreen>
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _countdownTimer?.cancel();
     _cameraController?.dispose();
     _faceDetector?.close();
     _pulseCtrl.dispose();
     super.dispose();
+  }
+
+  @override
+  void reassemble() {
+    super.reassemble();
+    _releaseScanResourcesForRestart();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.inactive ||
+        state == AppLifecycleState.paused ||
+        state == AppLifecycleState.detached) {
+      _releaseScanResourcesForRestart();
+    }
   }
 
   Future<void> _startScan() async {
@@ -260,9 +277,17 @@ class _ScanScreenState extends ConsumerState<ScanScreen>
   Future<void> _stopCamera() async {
     final controller = _cameraController;
     if (controller != null && controller.value.isStreamingImages) {
-      await controller.stopImageStream();
+      try {
+        await controller.stopImageStream();
+      } catch (_) {
+        // Camera plugins can already be tearing down during restart.
+      }
     }
-    await controller?.dispose();
+    try {
+      await controller?.dispose();
+    } catch (_) {
+      // Safe to ignore during engine teardown.
+    }
     if (mounted) {
       setState(() {
         _cameraController = null;
@@ -272,6 +297,17 @@ class _ScanScreenState extends ConsumerState<ScanScreen>
       _cameraController = null;
       _initializingCamera = false;
     }
+  }
+
+  void _releaseScanResourcesForRestart() {
+    _countdownTimer?.cancel();
+    _countdownTimer = null;
+    if (_cameraController == null && !_scanning) {
+      return;
+    }
+    _scanning = false;
+    _initializingCamera = false;
+    unawaited(_stopCamera());
   }
 
   InputImage? _inputImageFromCameraImage(
