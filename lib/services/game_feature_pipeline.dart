@@ -23,20 +23,26 @@ class GameFeatureVector {
     this.pressureVarianceZScore = 0,
     this.errorRateZScore = 0,
     this.hesitationIndexZScore = 0,
-    this.sessionCompletionRate = 0,
+    // No sessions means no evidence of quitting early.
+    this.sessionCompletionRate = 1,
     this.fatigueCurveDropIndex = 0,
     this.memoryScoreZScore = 0,
     this.flexibilityRecoveryMs = 0,
     this.ruminationEventCount = 0,
   });
 
-  double get weightedScore {
+  /// How strained recent play looks; positive means more strain than usual.
+  ///
+  /// Every term is oriented so that a higher value means worse play: slower
+  /// reactions, more errors and more hesitation add load, while better memory
+  /// accuracy and late-game accuracy (fatigue index > 0) subtract it.
+  double get stressLoad {
     return reactionMsZScore * 0.20 +
         pressureVarianceZScore * 0.15 +
-        errorRateZScore * 0.15 +
+        errorRateZScore * 0.15 -
         memoryScoreZScore * 0.12 +
         hesitationIndexZScore * 0.12 +
-        sessionCompletionRate * 0.10 +
+        (1 - sessionCompletionRate) * 0.10 -
         fatigueCurveDropIndex * 0.08 +
         flexibilityRecoveryMs * 0.05 +
         ruminationEventCount * 0.03;
@@ -245,7 +251,8 @@ class CogniPulseGameContributor {
 
   Future<int> computeAdjustment(String userId) async {
     final features = await _pipeline.compute(userId);
-    final clamped = features.weightedScore.clamp(-3.0, 3.0);
-    return (clamped * 5).round();
+    final clamped = features.stressLoad.clamp(-3.0, 3.0);
+    // More strain lowers CogniPulse; calmer, sharper play raises it.
+    return -(clamped * 5).round();
   }
 }
