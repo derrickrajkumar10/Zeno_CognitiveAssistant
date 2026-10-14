@@ -382,7 +382,7 @@ class _MochiGameSuggestion extends StatelessWidget {
     return GestureDetector(
       onTap: () {
         HapticFeedback.lightImpact();
-        Navigator.of(context).push(
+        Navigator.of(context, rootNavigator: true).push(
           MaterialPageRoute(builder: (_) => s.game),
         );
       },

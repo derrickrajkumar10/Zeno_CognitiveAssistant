@@ -29,7 +29,12 @@ class _QuestsScreenState extends ConsumerState<QuestsScreen> {
   void _handleQuestComplete(String questId) {
     final game = _gameQuestMap[questId];
     if (game != null) {
-      Navigator.of(context).push<bool>(MaterialPageRoute(builder: (_) => game)).then((completed) {
+      Navigator.of(context, rootNavigator: true)
+          .push<bool>(MaterialPageRoute(builder: (_) => game))
+          .then((completed) {
+        if (!mounted) {
+          return;
+        }
         if (completed != true) {
           _bannerKey.currentState?.show(
             'Mochi kept the quest open. Finish the game to claim the XP.',

@@ -259,7 +259,8 @@ class _GameCard extends StatelessWidget {
     return GestureDetector(
       onTap: () {
         HapticFeedback.lightImpact();
-        Navigator.of(context).push(MaterialPageRoute(builder: (_) => game.info.builder()));
+        Navigator.of(context, rootNavigator: true)
+            .push(MaterialPageRoute(builder: (_) => game.info.builder()));
       },
       child: GlassCard(
         child: Padding(
