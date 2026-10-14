@@ -170,7 +170,8 @@ class _ScanScreenState extends ConsumerState<ScanScreen>
       camera,
       ResolutionPreset.medium,
       enableAudio: false,
-      imageFormatGroup: ImageFormatGroup.yuv420,
+      // ML Kit on Android only accepts NV21 (or YV12) byte buffers.
+      imageFormatGroup: ImageFormatGroup.nv21,
     );
     await controller.initialize();
     await controller.lockCaptureOrientation(DeviceOrientation.portraitUp);
@@ -213,6 +214,10 @@ class _ScanScreenState extends ConsumerState<ScanScreen>
                 : next,
       );
       _samples.add(_sampleFromFace(face, image.width.toDouble(), image.height.toDouble()));
+    } catch (error) {
+      // A single unreadable frame shouldn't end the scan; too few good
+      // samples is reported once the countdown finishes.
+      debugPrint('Face detection skipped a frame: $error');
     } finally {
       _processingFrame = false;
     }
@@ -317,22 +322,19 @@ class _ScanScreenState extends ConsumerState<ScanScreen>
     final rotation =
         InputImageRotationValue.fromRawValue(description.sensorOrientation);
     final format = InputImageFormatValue.fromRawValue(image.format.raw);
-    if (rotation == null || format == null) {
+    // NV21 frames arrive as a single plane holding the whole image.
+    if (rotation == null ||
+        format != InputImageFormat.nv21 ||
+        image.planes.length != 1) {
       return null;
     }
 
-    final buffer = WriteBuffer();
-    for (final plane in image.planes) {
-      buffer.putUint8List(plane.bytes);
-    }
-    final bytes = buffer.done().buffer.asUint8List();
-
     return InputImage.fromBytes(
-      bytes: bytes,
+      bytes: image.planes.first.bytes,
       metadata: InputImageMetadata(
         size: Size(image.width.toDouble(), image.height.toDouble()),
         rotation: rotation,
-        format: format,
+        format: InputImageFormat.nv21,
         bytesPerRow: image.planes.first.bytesPerRow,
       ),
     );
