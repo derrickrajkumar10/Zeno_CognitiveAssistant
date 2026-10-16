@@ -11,6 +11,7 @@ import 'package:zeno/providers/app_state_provider.dart';
 import 'package:zeno/theme/app_theme.dart';
 import 'package:zeno/widgets/glass_card.dart';
 import 'package:zeno/widgets/mochi_widget.dart';
+import 'package:zeno/widgets/typing_check_in.dart';
 import 'package:zeno/services/face_scan_analyzer.dart';
 
 class ScanScreen extends ConsumerStatefulWidget {
@@ -27,6 +28,7 @@ class _ScanScreenState extends ConsumerState<ScanScreen>
   final FaceScanAnalyzer _analyzer = FaceScanAnalyzer();
   final List<FaceFrameSignal> _samples = [];
 
+  bool _typingMode = false;
   bool _scanning = false;
   bool _initializingCamera = false;
   bool _complete = false;
@@ -373,57 +375,77 @@ class _ScanScreenState extends ConsumerState<ScanScreen>
               .slideY(begin: -0.1),
           const SizedBox(height: AppTheme.sm),
           Text(
-            _androidSupported
-                ? 'Quick check-in with your mind'
-                : 'Face scan is available on Android only right now.',
+            _typingMode
+                ? 'Typing rhythm check-in · 35% of CogniPulse'
+                : _androidSupported
+                    ? 'Face check-in · 20% of CogniPulse'
+                    : 'Face scan is available on Android only right now.',
             style: AppTheme.bodySmall,
           ).animate().fadeIn(duration: 500.ms, delay: 100.ms),
-          const SizedBox(height: AppTheme.xxl),
-          Center(
-            child: Column(
-              children: [
-                _buildScanSurface(),
-                const SizedBox(height: AppTheme.lg),
-                Text(
-                  _statusText,
-                  style: AppTheme.bodyMedium.copyWith(
-                    color: _errorText == null ? AppTheme.textSecondary : AppTheme.error,
-                  ),
-                  textAlign: TextAlign.center,
-                ),
-                if (_errorText != null) ...[
-                  const SizedBox(height: AppTheme.sm),
-                  Text(
-                    _errorText!,
-                    style: AppTheme.caption.copyWith(color: AppTheme.error),
-                    textAlign: TextAlign.center,
-                  ),
-                ],
-                if (_complete && _latestEntry != null) ...[
-                  const SizedBox(height: AppTheme.lg),
-                  _ScanResultCard(entry: _latestEntry!),
-                ],
-              ],
-            ),
+          const SizedBox(height: AppTheme.lg),
+          _ModeSwitch(
+            typingMode: _typingMode,
+            enabled: !_scanning && !_initializingCamera,
+            onChanged: (typing) {
+              HapticFeedback.lightImpact();
+              setState(() => _typingMode = typing);
+            },
           ),
-          const SizedBox(height: AppTheme.xxl),
-          if (!_scanning)
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                onPressed: _initializingCamera ? null : _startScan,
-                child: Text(
-                  _complete ? 'Scan Again' : 'Begin Scan',
-                  style: AppTheme.labelLarge.copyWith(color: Colors.white),
-                ),
-              ),
-            )
-                .animate()
-                .fadeIn(duration: 500.ms, delay: 200.ms)
-                .slideY(begin: 0.1),
+          const SizedBox(height: AppTheme.lg),
+          if (_typingMode)
+            const TypingCheckIn()
+          else
+            ..._buildFaceScan(),
         ],
       ),
     );
+  }
+
+  List<Widget> _buildFaceScan() {
+    return [
+      Center(
+        child: Column(
+          children: [
+            _buildScanSurface(),
+            const SizedBox(height: AppTheme.lg),
+            Text(
+              _statusText,
+              style: AppTheme.bodyMedium.copyWith(
+                color: _errorText == null ? AppTheme.textSecondary : AppTheme.error,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            if (_errorText != null) ...[
+              const SizedBox(height: AppTheme.sm),
+              Text(
+                _errorText!,
+                style: AppTheme.caption.copyWith(color: AppTheme.error),
+                textAlign: TextAlign.center,
+              ),
+            ],
+            if (_complete && _latestEntry != null) ...[
+              const SizedBox(height: AppTheme.lg),
+              _ScanResultCard(entry: _latestEntry!),
+            ],
+          ],
+        ),
+      ),
+      const SizedBox(height: AppTheme.xxl),
+      if (!_scanning)
+        SizedBox(
+          width: double.infinity,
+          child: ElevatedButton(
+            onPressed: _initializingCamera ? null : _startScan,
+            child: Text(
+              _complete ? 'Scan Again' : 'Begin Scan',
+              style: AppTheme.labelLarge.copyWith(color: Colors.white),
+            ),
+          ),
+        )
+            .animate()
+            .fadeIn(duration: 500.ms, delay: 200.ms)
+            .slideY(begin: 0.1),
+    ];
   }
 
   Widget _buildScanSurface() {
@@ -654,6 +676,72 @@ class _MetricPill extends StatelessWidget {
             style: AppTheme.caption.copyWith(color: color),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _ModeSwitch extends StatelessWidget {
+  final bool typingMode;
+  final bool enabled;
+  final ValueChanged<bool> onChanged;
+
+  const _ModeSwitch({
+    required this.typingMode,
+    required this.enabled,
+    required this.onChanged,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    Widget option(String label, IconData icon, bool typing) {
+      final selected = typingMode == typing;
+      return Expanded(
+        child: GestureDetector(
+          onTap: enabled && !selected ? () => onChanged(typing) : null,
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 200),
+            padding: const EdgeInsets.symmetric(vertical: 12),
+            decoration: BoxDecoration(
+              color: selected ? AppTheme.surfaceGlass : Colors.transparent,
+              borderRadius: BorderRadius.circular(AppTheme.cardRadiusSm),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  icon,
+                  size: 18,
+                  color: selected ? AppTheme.primary : AppTheme.textTertiary,
+                ),
+                const SizedBox(width: 6),
+                Text(
+                  label,
+                  style: AppTheme.labelLarge.copyWith(
+                    color: selected ? AppTheme.primary : AppTheme.textTertiary,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
+
+    return Opacity(
+      opacity: enabled ? 1 : 0.5,
+      child: Container(
+        padding: const EdgeInsets.all(4),
+        decoration: BoxDecoration(
+          color: AppTheme.surfaceGlassDim,
+          borderRadius: BorderRadius.circular(AppTheme.cardRadius),
+        ),
+        child: Row(
+          children: [
+            option('Face', Icons.face_rounded, false),
+            option('Typing', Icons.keyboard_rounded, true),
+          ],
+        ),
       ),
     );
   }
