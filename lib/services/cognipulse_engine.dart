@@ -99,7 +99,8 @@ class CogniPulseEngine {
   }) {
     final today = _dateOnly(now);
     return List.generate(days, (index) {
-      final day = today.subtract(Duration(days: days - 1 - index));
+      // Calendar arithmetic, not Duration, so DST changes never skip a day.
+      final day = DateTime(today.year, today.month, today.day - (days - 1 - index));
       final dayReadings = _onDay(readings, day);
       if (dayReadings.isEmpty) {
         return DaySummary(day: day, score: null, stress: null, mood: null, readings: 0);
@@ -181,7 +182,8 @@ class CogniPulseEngine {
     final latest = <SignalType, SignalReading>{};
     for (final reading in readings) {
       final current = latest[reading.type];
-      if (current == null || reading.at.isAfter(current.at)) {
+      // On a timestamp tie the reading added later wins.
+      if (current == null || !reading.at.isBefore(current.at)) {
         latest[reading.type] = reading;
       }
     }

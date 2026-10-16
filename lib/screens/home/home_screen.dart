@@ -186,12 +186,7 @@ class HomeScreen extends ConsumerWidget {
 
               // ── Streak banner ───────────────────────────────────────
               // ── Mochi game suggestion ────────────────────────────
-              _MochiGameSuggestion(
-                score: score,
-                stressIndex: state.weekReadings.last.stressIndex / 100,
-                focusScore: state.weekReadings.last.focusLevel / 100,
-                moodScore: state.weekReadings.last.moodScore / 100,
-              ),
+              _MochiGameSuggestion(gameId: state.recommendedGameId),
               const SizedBox(height: AppTheme.md),
 
               if (state.user.currentStreak > 0)
@@ -331,49 +326,41 @@ class _QuickAction extends StatelessWidget {
 }
 
 class _MochiGameSuggestion extends StatelessWidget {
-  final int score;
-  final double stressIndex;
-  final double focusScore;
-  final double moodScore;
+  final String gameId;
 
-  const _MochiGameSuggestion({
-    required this.score,
-    required this.stressIndex,
-    required this.focusScore,
-    required this.moodScore,
-  });
+  const _MochiGameSuggestion({required this.gameId});
 
   ({String title, String message, IconData icon, Widget game}) _suggestion() {
-    if (stressIndex > 0.7 || score < 30) {
-      return (
-        title: 'Wave Sync',
-        message: 'Mochi thinks some breathing would help right now',
-        icon: Icons.waves_rounded,
-        game: const WaveSyncGame(),
-      );
+    switch (gameId) {
+      case 'wave_sync':
+        return (
+          title: 'Wave Sync',
+          message: 'Mochi thinks some breathing would help right now',
+          icon: Icons.waves_rounded,
+          game: const WaveSyncGame(),
+        );
+      case 'focus_flicker':
+        return (
+          title: 'Focus Flicker',
+          message: 'Mochi noticed your focus could use a boost',
+          icon: Icons.visibility_rounded,
+          game: const FocusFlickerGame(),
+        );
+      case 'memory_garden':
+        return (
+          title: 'Memory Garden',
+          message: "Let's plant some memories together",
+          icon: Icons.local_florist_rounded,
+          game: const MemoryGardenGame(),
+        );
+      default:
+        return (
+          title: 'Bubble Drift',
+          message: 'Mochi wants to play! Pop some bubbles?',
+          icon: Icons.bubble_chart_rounded,
+          game: const BubbleDriftGame(),
+        );
     }
-    if (focusScore < 0.3) {
-      return (
-        title: 'Focus Flicker',
-        message: 'Mochi noticed your focus could use a boost',
-        icon: Icons.visibility_rounded,
-        game: const FocusFlickerGame(),
-      );
-    }
-    if (moodScore < 0.4) {
-      return (
-        title: 'Memory Garden',
-        message: "Let's plant some memories together",
-        icon: Icons.local_florist_rounded,
-        game: const MemoryGardenGame(),
-      );
-    }
-    return (
-      title: 'Bubble Drift',
-      message: 'Mochi wants to play! Pop some bubbles?',
-      icon: Icons.bubble_chart_rounded,
-      game: const BubbleDriftGame(),
-    );
   }
 
   @override

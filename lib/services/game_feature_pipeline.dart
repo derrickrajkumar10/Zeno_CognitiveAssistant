@@ -255,4 +255,13 @@ class CogniPulseGameContributor {
     // More strain lowers CogniPulse; calmer, sharper play raises it.
     return -(clamped * 5).round();
   }
+
+  /// The game-play signal for CogniPulse, 30–90.
+  ///
+  /// Play that matches your own recent baseline reads as a neutral 60; each
+  /// point of adjustment moves it by 2.
+  Future<int> computeSignalScore(String userId) async {
+    final adjustment = await computeAdjustment(userId);
+    return (60 + adjustment * 2).clamp(30, 90);
+  }
 }

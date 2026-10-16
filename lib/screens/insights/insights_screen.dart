@@ -14,22 +14,22 @@ class InsightsScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final state = ref.watch(appStateProvider);
-    final readings = state.weekReadings;
+    final readings = state.weekDays.where((day) => day.hasData).toList();
     final latestFaceScan = state.latestFaceScan;
     final personality = ref.watch(mochiPersonalityProvider);
     final pad = MediaQuery.of(context).padding;
 
     final avgScore = readings.isEmpty
         ? 0.0
-        : readings.map((reading) => reading.score).reduce((a, b) => a + b) /
+        : readings.map((reading) => reading.score!).reduce((a, b) => a + b) /
             readings.length;
     final bestDay = readings.isEmpty
         ? null
-        : readings.reduce((a, b) => a.score > b.score ? a : b);
+        : readings.reduce((a, b) => a.score! > b.score! ? a : b);
     final avgStress = readings.isEmpty
         ? 0.0
         : readings
-                .map((reading) => reading.stressIndex)
+                .map((reading) => reading.stress ?? 0)
                 .reduce((a, b) => a + b) /
             readings.length;
 
@@ -120,7 +120,7 @@ class InsightsScreen extends ConsumerWidget {
                             readings.length,
                             (index) => FlSpot(
                               index.toDouble(),
-                              readings[index].score.toDouble(),
+                              readings[index].score!.toDouble(),
                             ),
                           ),
                           isCurved: true,

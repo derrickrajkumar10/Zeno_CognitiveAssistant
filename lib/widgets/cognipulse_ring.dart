@@ -1,7 +1,6 @@
 import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:zeno/mock_data.dart';
 import 'package:zeno/models/mochi_state.dart';
 import 'package:zeno/providers/app_state_provider.dart';
 import 'package:zeno/theme/app_theme.dart';
@@ -39,7 +38,7 @@ class _CogniPulseRingState extends ConsumerState<CogniPulseRing>
   Widget build(BuildContext context) {
     final score = ref.watch(cogniPulseProvider);
     final mood = ref.watch(mochiMoodProvider);
-    final delta = MockData.scoreDelta;
+    final delta = ref.watch(appStateProvider.select((s) => s.scoreDelta));
 
     // Pulse when score changes
     if (score != _prevScore) {

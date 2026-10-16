@@ -96,9 +96,14 @@ class GameWrapperState extends ConsumerState<GameWrapper> {
       await _repo.saveTouchEvents(touchEvents);
       await _repo.updateBaseline(session.userId, widget.gameId);
 
-      final adjustment = await _contributor.computeAdjustment(session.userId);
-      if (!dropOffEarly && mounted) {
-        ref.read(appStateProvider.notifier).applyGameContribution(adjustment);
+      final signalScore = await _contributor.computeSignalScore(session.userId);
+      if (mounted) {
+        await ref.read(appStateProvider.notifier).recordGameResult(
+              gameId: widget.gameId,
+              xpReward: widget.xpReward,
+              completed: !dropOffEarly,
+              signalScore: signalScore,
+            );
       }
     } catch (error, stackTrace) {
       debugPrint('GameWrapper could not save session: $error');
@@ -147,7 +152,7 @@ class GameWrapperState extends ConsumerState<GameWrapper> {
         child: PostGameScreen(
           gameTitle: widget.gameTitle,
           score: _gameScore,
-          xpEarned: widget.xpReward,
+          xpEarned: _completedNaturally ? widget.xpReward : 0,
           levelReached: _levelReached,
           onPlayAgain: _playAgain,
           onExit: () => Navigator.of(context).pop(_completedNaturally),

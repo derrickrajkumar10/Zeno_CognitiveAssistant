@@ -69,4 +69,30 @@ void main() {
       expect(await _adjustmentFor(extreme), -15);
     });
   });
+
+  group('CogniPulseGameContributor.computeSignalScore', () {
+    Future<int> signalFor(GameFeatureVector vector) =>
+        CogniPulseGameContributor(pipeline: _FixedPipeline(vector))
+            .computeSignalScore('alex');
+
+    test('play that matches your own baseline reads as a neutral 60', () async {
+      expect(await signalFor(const GameFeatureVector()), 60);
+    });
+
+    test('strained play reads below 60, sharp play above', () async {
+      expect(
+        await signalFor(const GameFeatureVector(reactionMsZScore: 2, errorRateZScore: 2)),
+        lessThan(60),
+      );
+      expect(
+        await signalFor(const GameFeatureVector(reactionMsZScore: -2, errorRateZScore: -2)),
+        greaterThan(60),
+      );
+    });
+
+    test('the signal stays between 30 and 90', () async {
+      expect(await signalFor(const GameFeatureVector(reactionMsZScore: 99)), 30);
+      expect(await signalFor(const GameFeatureVector(reactionMsZScore: -99)), 90);
+    });
+  });
 }

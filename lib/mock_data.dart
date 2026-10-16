@@ -1,44 +1,8 @@
-import 'package:zeno/models/cognipulse_reading.dart';
 import 'package:zeno/models/quest.dart';
-import 'package:zeno/models/user_profile.dart';
 
 class MockData {
-  // ─── USER ───────────────────────────────────────────────────────
-  static const UserProfile user = UserProfile(
-    name: 'Alex',
-    level: 4,
-    xp: 1240,
-    xpToNextLevel: 1500,
-    currentStreak: 5,
-    totalQuestsCompleted: 42,
-    avgCogniPulse: 68.4,
-    avatarId: 'mochi',
-    badges: [
-      Badge(id: 'early_bird',    name: 'Early Bird',        icon: '🌅', description: '7am check-in 3 days in a row',  unlocked: true),
-      Badge(id: 'zen_streak',    name: 'Zen Streak',        icon: '🧘', description: '5-day quest streak',            unlocked: true),
-      Badge(id: 'mochi_fav',     name: "Mochi's Favourite", icon: '🐾', description: 'Tapped Mochi 50 times',          unlocked: true),
-      Badge(id: 'brain_boost',   name: 'Brain Boost',       icon: '⚡', description: 'CogniPulse above 80 for 3 days', unlocked: true),
-      Badge(id: 'deep_breather', name: 'Deep Breather',     icon: '💨', description: 'Completed 10 breathing quests',  unlocked: false),
-      Badge(id: 'night_owl',     name: 'Night Owl',         icon: '🦉', description: 'Check-in after 11pm',            unlocked: false),
-    ],
-  );
-
-  // ─── 7-DAY COGNIPULSE HISTORY ───────────────────────────────────
-  static final List<CogniPulseReading> weekReadings = [
-    CogniPulseReading(date: DateTime.now().subtract(const Duration(days: 6)), score: 58, stressIndex: 62, focusLevel: 51, moodScore: 55),
-    CogniPulseReading(date: DateTime.now().subtract(const Duration(days: 5)), score: 65, stressIndex: 52, focusLevel: 60, moodScore: 66),
-    CogniPulseReading(date: DateTime.now().subtract(const Duration(days: 4)), score: 71, stressIndex: 44, focusLevel: 68, moodScore: 72),
-    CogniPulseReading(date: DateTime.now().subtract(const Duration(days: 3)), score: 63, stressIndex: 55, focusLevel: 58, moodScore: 61),
-    CogniPulseReading(date: DateTime.now().subtract(const Duration(days: 2)), score: 78, stressIndex: 35, focusLevel: 79, moodScore: 80),
-    CogniPulseReading(date: DateTime.now().subtract(const Duration(days: 1)), score: 74, stressIndex: 40, focusLevel: 72, moodScore: 75),
-    CogniPulseReading(date: DateTime.now(),                                   score: 73, stressIndex: 42, focusLevel: 71, moodScore: 74),
-  ];
-
-  static int get currentScore => weekReadings.last.score;
-  static int get yesterdayScore => weekReadings[weekReadings.length - 2].score;
-  static int get scoreDelta => currentScore - yesterdayScore;
-
-  // ─── QUESTS ─────────────────────────────────────────────────────
+  // ─── QUEST CATALOG ──────────────────────────────────────────────
+  // Definitions only; which ones are done today comes from the XP ledger.
   static List<Quest> get quests => [
     Quest(id: 'breathing',  title: 'Box Breathing',   icon: '💨', xpReward: 40, duration: '2 min',  description: 'Inhale 4, hold 4, exhale 4, hold 4.'),
     Quest(id: 'sabbath',    title: 'Screen Sabbath',  icon: '📵', xpReward: 60, duration: '15 min', description: 'Put the phone face-down. Just exist.'),

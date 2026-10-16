@@ -110,7 +110,7 @@ class ProfileScreen extends ConsumerWidget {
               Expanded(
                 child: _StatTile(
                   icon: Icons.insights_rounded,
-                  value: user.avgCogniPulse.toStringAsFixed(0),
+                  value: user.avgCogniPulse?.toStringAsFixed(0) ?? '--',
                   label: 'Avg CP',
                   color: AppTheme.info,
                 ),
