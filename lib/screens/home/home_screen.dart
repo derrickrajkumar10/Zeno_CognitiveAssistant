@@ -11,6 +11,8 @@ import 'package:zeno/widgets/glass_card.dart';
 import 'package:zeno/widgets/mochi_dialogue_bubble.dart';
 import 'package:zeno/widgets/mochi_widget.dart';
 import 'package:zeno/widgets/particle_overlay.dart';
+import 'package:zeno/widgets/quick_mood_log.dart';
+import 'package:zeno/widgets/score_breakdown_sheet.dart';
 import 'package:zeno/screens/games/wave_sync_game.dart';
 import 'package:zeno/screens/games/focus_flicker_game.dart';
 import 'package:zeno/screens/games/memory_garden_game.dart';
@@ -86,6 +88,10 @@ class HomeScreen extends ConsumerWidget {
 
               // ── CogniPulse summary card ─────────────────────────────
               GlassCard(
+                onTap: () {
+                  HapticFeedback.lightImpact();
+                  showScoreBreakdownSheet(context);
+                },
                 child: Row(
                   children: [
                     // Score ring
@@ -136,9 +142,18 @@ class HomeScreen extends ConsumerWidget {
                                   fontWeight: FontWeight.w600,
                                 ),
                               ),
-                              const SizedBox(width: 8),
-                              _DeltaChip(delta: state.scoreDelta),
+                              if (state.scoreDelta != 0) ...[
+                                const SizedBox(width: 8),
+                                _DeltaChip(delta: state.scoreDelta),
+                              ],
                             ],
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            state.breakdown.hasCheckInToday
+                                ? 'Tap to see why'
+                                : 'No check-ins yet today · tap to see why',
+                            style: AppTheme.caption,
                           ),
                         ],
                       ),
@@ -152,6 +167,14 @@ class HomeScreen extends ConsumerWidget {
               )
                   .animate()
                   .fadeIn(duration: 500.ms, delay: 300.ms)
+                  .slideY(begin: 0.05),
+
+              const SizedBox(height: AppTheme.md),
+
+              // ── Self-reported mood ──────────────────────────────────
+              const QuickMoodLog()
+                  .animate()
+                  .fadeIn(duration: 500.ms, delay: 350.ms)
                   .slideY(begin: 0.05),
 
               const SizedBox(height: AppTheme.md),
