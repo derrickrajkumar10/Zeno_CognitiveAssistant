@@ -281,6 +281,18 @@ class _ScanScreenState extends ConsumerState<ScanScreen>
 
   Future<void> _stopCamera() async {
     final controller = _cameraController;
+    // Take the preview off screen before disposing: dispose() marks the
+    // controller disposed immediately, and the still-visible CameraPreview
+    // would throw on its next frame.
+    if (mounted) {
+      setState(() {
+        _cameraController = null;
+        _initializingCamera = false;
+      });
+    } else {
+      _cameraController = null;
+      _initializingCamera = false;
+    }
     if (controller != null && controller.value.isStreamingImages) {
       try {
         await controller.stopImageStream();
@@ -292,15 +304,6 @@ class _ScanScreenState extends ConsumerState<ScanScreen>
       await controller?.dispose();
     } catch (_) {
       // Safe to ignore during engine teardown.
-    }
-    if (mounted) {
-      setState(() {
-        _cameraController = null;
-        _initializingCamera = false;
-      });
-    } else {
-      _cameraController = null;
-      _initializingCamera = false;
     }
   }
 
