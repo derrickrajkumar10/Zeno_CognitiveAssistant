@@ -46,4 +46,38 @@ void main() {
     await tester.pumpWidget(const SizedBox());
     await tester.pump(const Duration(seconds: 5));
   });
+
+  testWidgets('closing the sheet during "Nice work" still completes the quest',
+      (tester) async {
+    SharedPreferences.setMockInitialValues({});
+    final prefs = await SharedPreferences.getInstance();
+    final container = ProviderContainer(
+      overrides: [sharedPreferencesProvider.overrideWithValue(prefs)],
+    );
+    addTearDown(container.dispose);
+    await tester.pumpWidget(UncontrolledProviderScope(
+      container: container,
+      child: const MaterialApp(home: Scaffold(body: QuestsScreen())),
+    ));
+    await tester.pump(const Duration(seconds: 1));
+
+    await tester.tap(find.text('Box Breathing'));
+    await tester.pump();
+    await tester.pump(const Duration(seconds: 1));
+    await tester.tap(find.text('Start'));
+    for (var i = 0; i < 16; i++) {
+      await tester.pump(const Duration(seconds: 4));
+    }
+    // The session just finished; dismiss before the sheet closes itself.
+    expect(find.text('Nice work'), findsOneWidget);
+    await tester.tapAt(const Offset(10, 10));
+    await tester.pump();
+    await tester.pump(const Duration(seconds: 2));
+
+    expect(find.byType(QuickBreathingCard), findsNothing);
+    expect(container.read(appStateProvider).questsDoneToday, contains('breathing'));
+
+    await tester.pumpWidget(const SizedBox());
+    await tester.pump(const Duration(seconds: 5));
+  });
 }

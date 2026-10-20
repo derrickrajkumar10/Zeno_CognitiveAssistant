@@ -26,7 +26,9 @@ class _QuestsScreenState extends ConsumerState<QuestsScreen> {
   };
 
   Future<void> _openBreathingQuest() async {
-    final completed = await showModalBottomSheet<bool>(
+    final notifier = ref.read(appStateProvider.notifier);
+    var completed = false;
+    await showModalBottomSheet<void>(
       context: context,
       useRootNavigator: true,
       backgroundColor: Colors.transparent,
@@ -39,10 +41,13 @@ class _QuestsScreenState extends ConsumerState<QuestsScreen> {
         ),
         child: QuickBreathingCard(
           onComplete: () {
+            // Credit the quest now, so closing the sheet early cannot lose it.
+            completed = true;
+            notifier.completeQuest('breathing');
             // Leave "Nice work" on screen for a moment before closing.
             Future.delayed(const Duration(milliseconds: 1200), () {
               if (sheetContext.mounted) {
-                Navigator.of(sheetContext).pop(true);
+                Navigator.of(sheetContext).pop();
               }
             });
           },
@@ -52,13 +57,12 @@ class _QuestsScreenState extends ConsumerState<QuestsScreen> {
     if (!mounted) {
       return;
     }
-    if (completed != true) {
+    if (!completed) {
       _bannerKey.currentState?.show(
         'Mochi kept the quest open. Finish all four rounds to claim the XP.',
       );
       return;
     }
-    await ref.read(appStateProvider.notifier).completeQuest('breathing');
     _bannerKey.currentState?.show("Box Breathing done. Mochi feels calmer too 🌱");
   }
 

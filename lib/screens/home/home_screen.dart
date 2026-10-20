@@ -196,7 +196,7 @@ class HomeScreen extends ConsumerWidget {
                       icon: Icons.auto_awesome_rounded,
                       label: 'Daily Quest',
                       color: AppTheme.primaryLight,
-                      onTap: () {},
+                      onTap: () => context.go('/quests'),
                     ),
                   ),
                 ],
