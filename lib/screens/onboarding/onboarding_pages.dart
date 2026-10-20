@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
@@ -9,10 +11,12 @@ import 'package:zeno/widgets/mochi_widget.dart';
 // ─── Shared helpers ────────────────────────────────────────────────────────────
 
 /// Full-width black pill CTA button (design system: height 56, borderRadius 50).
-class _PillButton extends StatelessWidget {
+class PillButton extends StatelessWidget {
   final String label;
-  final VoidCallback onPressed;
-  const _PillButton({required this.label, required this.onPressed});
+
+  /// Null shows the button disabled.
+  final VoidCallback? onPressed;
+  const PillButton({required this.label, required this.onPressed, super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -24,6 +28,9 @@ class _PillButton extends StatelessWidget {
         style: ElevatedButton.styleFrom(
           backgroundColor: AppTheme.primaryButton,
           foregroundColor: Colors.white,
+          disabledBackgroundColor:
+              AppTheme.primaryButton.withValues(alpha: 0.25),
+          disabledForegroundColor: Colors.white,
           shape:
               RoundedRectangleBorder(borderRadius: BorderRadius.circular(50)),
           elevation: 0,
@@ -182,7 +189,7 @@ class _WelcomePageState extends State<WelcomePage>
                     ),
                   ),
                   const Spacer(flex: 3),
-                  _PillButton(label: "Let's go >", onPressed: widget.onNext),
+                  PillButton(label: "Let's go >", onPressed: widget.onNext),
                   const SizedBox(height: 12),
                   Text(
                     'No account needed · Always private',
@@ -376,7 +383,7 @@ class _NameEntryPageState extends State<NameEntryPage> {
                     onSubmitted: (_) => widget.onNext(),
                   ),
                   const Spacer(),
-                  _PillButton(label: 'Continue >', onPressed: widget.onNext),
+                  PillButton(label: 'Continue >', onPressed: widget.onNext),
                   const SizedBox(height: 40),
                 ],
               ),
@@ -658,7 +665,7 @@ class _AvatarSelectionPageState extends State<AvatarSelectionPage> {
                 ),
                 Padding(
                   padding: const EdgeInsets.fromLTRB(28, 12, 28, 40),
-                  child: _PillButton(
+                  child: PillButton(
                     label: 'Continue >',
                     onPressed: () => widget.onCompanionSelected(_selected),
                   ),
@@ -770,12 +777,14 @@ class PermissionsPage extends StatelessWidget {
                         const Icon(Icons.shield_rounded,
                             size: 16, color: AppTheme.successMint),
                         const SizedBox(width: 6),
-                        Text(
-                          'Everything stays on your phone',
-                          style: GoogleFonts.nunito(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w700,
-                            color: AppTheme.successMint,
+                        Flexible(
+                          child: Text(
+                            'Everything stays on your phone',
+                            style: GoogleFonts.nunito(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w700,
+                              color: AppTheme.successMint,
+                            ),
                           ),
                         ),
                       ],
@@ -785,20 +794,22 @@ class PermissionsPage extends StatelessWidget {
                   ...[
                     const _PermissionTile(
                       icon: Icons.keyboard_outlined,
-                      title: 'Typing patterns',
-                      description: 'Analyses rhythm and speed — never content.',
+                      title: 'Typing check-in',
+                      description:
+                          'A short typing test in Scan. Rhythm and speed only.',
                       accentColor: AppTheme.selectedGreen,
                     ),
                     const _PermissionTile(
                       icon: Icons.phone_android_rounded,
-                      title: 'Phone usage',
-                      description: 'Session length and app-switching patterns.',
+                      title: 'Phone usage (coming later)',
+                      description: 'Not measured in this build. Nothing is read.',
                       accentColor: AppTheme.warmAccent,
                     ),
                     const _PermissionTile(
                       icon: Icons.face_outlined,
-                      title: 'Facial scan (optional)',
-                      description: 'One-time valence reading. On-device only.',
+                      title: 'Face scan (optional)',
+                      description:
+                          'Camera runs only when you start a scan. On-device.',
                       accentColor: Color(0xFF6EAAFF),
                     ),
                   ].asMap().entries.map((e) => Padding(
@@ -813,7 +824,7 @@ class PermissionsPage extends StatelessWidget {
                                 curve: Curves.easeOutCubic),
                       )),
                   const Spacer(),
-                  _PillButton(label: "Got it — let's go >", onPressed: onNext),
+                  PillButton(label: "Got it — let's go >", onPressed: onNext),
                   const SizedBox(height: 40),
                 ],
               ),
@@ -898,6 +909,7 @@ class _MeetMochiPageState extends State<MeetMochiPage>
 
   bool _showContent = false;
   bool _videoInitialized = false;
+  Timer? _revealFallback;
 
   @override
   void initState() {
@@ -908,25 +920,35 @@ class _MeetMochiPageState extends State<MeetMochiPage>
         .animate(
             CurvedAnimation(parent: _textCtrl, curve: Curves.easeOutCubic));
 
-    _videoCtrl = VideoPlayerController.asset('assets/videos/meet_mochi.mp4')
-      ..initialize().then((_) {
-        if (!mounted) return;
-        setState(() => _videoInitialized = true);
-        _videoCtrl.setLooping(true);
-        _videoCtrl.play();
+    // The finish button lives in the revealed content, so it must appear even
+    // if the video is slow or can't play on this device.
+    _revealFallback = Timer(const Duration(seconds: 4), _revealContent);
 
-        // Show text after a short delay once video starts
-        Future.delayed(1200.ms, () {
-          if (mounted) {
-            setState(() => _showContent = true);
-            _textCtrl.forward();
-          }
-        });
-      });
+    _videoCtrl = VideoPlayerController.asset('assets/videos/meet_mochi.mp4');
+    _videoCtrl.initialize().then((_) {
+      if (!mounted) return;
+      setState(() => _videoInitialized = true);
+      _videoCtrl.setLooping(true);
+      _videoCtrl.play();
+
+      // Show text after a short delay once video starts
+      Future.delayed(1200.ms, _revealContent);
+    }).catchError((Object error) {
+      debugPrint('Meet Mochi video unavailable: $error');
+      _revealContent();
+    });
+  }
+
+  void _revealContent() {
+    _revealFallback?.cancel();
+    if (!mounted || _showContent) return;
+    setState(() => _showContent = true);
+    _textCtrl.forward();
   }
 
   @override
   void dispose() {
+    _revealFallback?.cancel();
     _videoCtrl.dispose();
     _textCtrl.dispose();
     super.dispose();
@@ -951,7 +973,12 @@ class _MeetMochiPageState extends State<MeetMochiPage>
             ),
           )
         else
-          Container(color: AppTheme.backgroundDeep), // Fallback while loading
+          // Fallback while loading, or if the video can't play.
+          Container(
+            color: AppTheme.backgroundDeep,
+            alignment: const Alignment(0, -0.45),
+            child: const MochiWidget(size: 200, interactive: false),
+          ),
 
         // Subtle gradient overlay to ensure text is readable against the video
         Container(
@@ -1012,7 +1039,7 @@ class _MeetMochiPageState extends State<MeetMochiPage>
                 if (_showContent)
                   FadeTransition(
                     opacity: _textFade,
-                    child: _PillButton(
+                    child: PillButton(
                       label: "Let's thrive 🌿",
                       onPressed: widget.onFinish,
                     ),

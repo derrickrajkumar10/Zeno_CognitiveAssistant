@@ -117,20 +117,6 @@ final _games = <_GameInfo>[
 class PlayroomScreen extends ConsumerWidget {
   const PlayroomScreen({super.key});
 
-  String _recommendedGameId(AppState state) {
-    final latestReading = state.weekReadings.last;
-    if (latestReading.stressIndex / 100 >= 0.7 || state.cogniPulseScore <= 30) {
-      return 'wave_sync';
-    }
-    if (latestReading.focusLevel / 100 < 0.3) {
-      return 'focus_flicker';
-    }
-    if (latestReading.moodScore / 100 < 0.4) {
-      return 'memory_garden';
-    }
-    return 'bubble_drift';
-  }
-
   Future<List<_RankedGame>> _loadGames(String recommendedId) async {
     final repo = GameRepository();
     final rankedGames = <_RankedGame>[];
@@ -162,7 +148,7 @@ class PlayroomScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final state = ref.watch(appStateProvider);
-    final recommendedId = _recommendedGameId(state);
+    final recommendedId = state.recommendedGameId;
 
     return Padding(
       padding: const EdgeInsets.only(
@@ -259,7 +245,8 @@ class _GameCard extends StatelessWidget {
     return GestureDetector(
       onTap: () {
         HapticFeedback.lightImpact();
-        Navigator.of(context).push(MaterialPageRoute(builder: (_) => game.info.builder()));
+        Navigator.of(context, rootNavigator: true)
+            .push(MaterialPageRoute(builder: (_) => game.info.builder()));
       },
       child: GlassCard(
         child: Padding(

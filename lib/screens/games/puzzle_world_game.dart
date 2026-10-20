@@ -190,7 +190,9 @@ class _PuzzleWorldPlayState extends State<_PuzzleWorldPlay> {
         widget.controller.endGame(score: score, levelReached: _level);
       } else {
         _level++;
-        Future.delayed(const Duration(milliseconds: 600), _startLevel);
+        Future.delayed(const Duration(milliseconds: 600), () {
+          if (mounted) _startLevel();
+        });
       }
     }
   }

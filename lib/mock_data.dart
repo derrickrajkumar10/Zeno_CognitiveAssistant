@@ -1,44 +1,8 @@
-import 'package:zeno/models/cognipulse_reading.dart';
 import 'package:zeno/models/quest.dart';
-import 'package:zeno/models/user_profile.dart';
 
 class MockData {
-  // ─── USER ───────────────────────────────────────────────────────
-  static const UserProfile user = UserProfile(
-    name: 'Alex',
-    level: 4,
-    xp: 1240,
-    xpToNextLevel: 1500,
-    currentStreak: 5,
-    totalQuestsCompleted: 42,
-    avgCogniPulse: 68.4,
-    avatarId: 'mochi',
-    badges: [
-      Badge(id: 'early_bird',    name: 'Early Bird',        icon: '🌅', description: '7am check-in 3 days in a row',  unlocked: true),
-      Badge(id: 'zen_streak',    name: 'Zen Streak',        icon: '🧘', description: '5-day quest streak',            unlocked: true),
-      Badge(id: 'mochi_fav',     name: "Mochi's Favourite", icon: '🐾', description: 'Tapped Mochi 50 times',          unlocked: true),
-      Badge(id: 'brain_boost',   name: 'Brain Boost',       icon: '⚡', description: 'CogniPulse above 80 for 3 days', unlocked: true),
-      Badge(id: 'deep_breather', name: 'Deep Breather',     icon: '💨', description: 'Completed 10 breathing quests',  unlocked: false),
-      Badge(id: 'night_owl',     name: 'Night Owl',         icon: '🦉', description: 'Check-in after 11pm',            unlocked: false),
-    ],
-  );
-
-  // ─── 7-DAY COGNIPULSE HISTORY ───────────────────────────────────
-  static final List<CogniPulseReading> weekReadings = [
-    CogniPulseReading(date: DateTime.now().subtract(const Duration(days: 6)), score: 58, stressIndex: 62, focusLevel: 51, moodScore: 55),
-    CogniPulseReading(date: DateTime.now().subtract(const Duration(days: 5)), score: 65, stressIndex: 52, focusLevel: 60, moodScore: 66),
-    CogniPulseReading(date: DateTime.now().subtract(const Duration(days: 4)), score: 71, stressIndex: 44, focusLevel: 68, moodScore: 72),
-    CogniPulseReading(date: DateTime.now().subtract(const Duration(days: 3)), score: 63, stressIndex: 55, focusLevel: 58, moodScore: 61),
-    CogniPulseReading(date: DateTime.now().subtract(const Duration(days: 2)), score: 78, stressIndex: 35, focusLevel: 79, moodScore: 80),
-    CogniPulseReading(date: DateTime.now().subtract(const Duration(days: 1)), score: 74, stressIndex: 40, focusLevel: 72, moodScore: 75),
-    CogniPulseReading(date: DateTime.now(),                                   score: 73, stressIndex: 42, focusLevel: 71, moodScore: 74),
-  ];
-
-  static int get currentScore => weekReadings.last.score;
-  static int get yesterdayScore => weekReadings[weekReadings.length - 2].score;
-  static int get scoreDelta => currentScore - yesterdayScore;
-
-  // ─── QUESTS ─────────────────────────────────────────────────────
+  // ─── QUEST CATALOG ──────────────────────────────────────────────
+  // Definitions only; which ones are done today comes from the XP ledger.
   static List<Quest> get quests => [
     Quest(id: 'breathing',  title: 'Box Breathing',   icon: '💨', xpReward: 40, duration: '2 min',  description: 'Inhale 4, hold 4, exhale 4, hold 4.'),
     Quest(id: 'sabbath',    title: 'Screen Sabbath',  icon: '📵', xpReward: 60, duration: '15 min', description: 'Put the phone face-down. Just exist.'),
@@ -169,57 +133,6 @@ class MockData {
     "You didn't have to do that — but you did. That's everything.",
   ];
 
-  // ─── WEEKLY LETTERS ──────────────────────────────────────────────
-  static const List<String> weeklyLetters = [
-    """Dear Alex,
-
-What a week you've given me to watch. Monday started rough — Mochi could feel the tension in those late-night scroll sessions — but by Wednesday, something shifted. You found your rhythm.
-
-Your CogniPulse peaked at 78 on Thursday, and that focus window between 9–11am? Pure gold. Mochi's been taking notes.
-
-The screen time dipped this weekend, and your breathing felt slower. That matters more than you know. Keep that going.
-
-Mochi's proud of you. Even the messy days count.
-
-With all the warmth a small bear can hold,
-Mochi 🐾""",
-
-    """Dear Alex,
-
-This week was heavy, and Mochi felt every bit of it alongside you.
-
-The late nights stacked up. The stress index climbed. Tuesday and Thursday were especially loud — Mochi noticed the pattern in your typing, the quick-switching between apps. The mind was searching for something it couldn't quite find.
-
-But here's what Mochi also saw: you kept going. You opened the app. You tried the box breathing on Wednesday even when it felt pointless. You showed up.
-
-That 5-day streak isn't a coincidence. It's evidence of something.
-
-Rest this weekend. Mochi will be right here on Monday.
-
-Yours,
-Mochi 🐾""",
-
-    """Dear Alex,
-
-Mochi has been waiting to write this one.
-
-This was a good week. Not perfect — Tuesday dipped and that's okay — but the arc was upward. Your CogniPulse averaged 74, your focus windows extended, and the morning routine is starting to stick.
-
-The Micro Walk on Thursday? Mochi genuinely got excited about that one. The numbers moved in a way Mochi doesn't always get to see.
-
-You're building something real here. Habits that compound. A rhythm that belongs to you.
-
-Mochi thinks you already know this. But sometimes it helps to hear it.
-
-Until next Sunday,
-Mochi 🐾""",
-  ];
-
-  static String get currentWeeklyLetter {
-    final weekNum = DateTime.now().weekOfYear;
-    return weeklyLetters[weekNum % weeklyLetters.length];
-  }
-
   // ─── MOCHI SYSTEM PROMPT ─────────────────────────────────────────
   static String mochiSystemPrompt(int score, String moodState) => """
 You are Mochi, a small round bear-cub companion in the ZENO wellness app.
@@ -238,12 +151,4 @@ Your personality:
 The user's current CogniPulse Score is: $score
 Mochi's current mood state is: $moodState
 """;
-}
-
-extension _DateWeek on DateTime {
-  int get weekOfYear {
-    final firstDayOfYear = DateTime(year, 1, 1);
-    final dayOfYear = difference(firstDayOfYear).inDays;
-    return (dayOfYear / 7).floor();
-  }
 }

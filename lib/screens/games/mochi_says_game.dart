@@ -57,11 +57,14 @@ class _MochiSaysPlayState extends State<_MochiSaysPlay> {
     setState(() => _showingSequence = true);
     await Future.delayed(const Duration(milliseconds: 400));
     for (final cell in _sequence) {
+      if (!mounted) return;
       setState(() => _highlightedCell = cell);
       await Future.delayed(Duration(milliseconds: max(300, 600 - _round * 30)));
+      if (!mounted) return;
       setState(() => _highlightedCell = -1);
       await Future.delayed(const Duration(milliseconds: 150));
     }
+    if (!mounted) return;
     setState(() => _showingSequence = false);
     widget.controller.markStimulus();
   }
@@ -121,7 +124,9 @@ class _MochiSaysPlayState extends State<_MochiSaysPlay> {
 
     _inputIndex++;
     if (_inputIndex >= _sequence.length) {
-      Future.delayed(const Duration(milliseconds: 400), _nextRound);
+      Future.delayed(const Duration(milliseconds: 400), () {
+        if (mounted) _nextRound();
+      });
     }
   }
 

@@ -11,6 +11,8 @@ import 'package:zeno/widgets/glass_card.dart';
 import 'package:zeno/widgets/mochi_dialogue_bubble.dart';
 import 'package:zeno/widgets/mochi_widget.dart';
 import 'package:zeno/widgets/particle_overlay.dart';
+import 'package:zeno/widgets/quick_mood_log.dart';
+import 'package:zeno/widgets/score_breakdown_sheet.dart';
 import 'package:zeno/screens/games/wave_sync_game.dart';
 import 'package:zeno/screens/games/focus_flicker_game.dart';
 import 'package:zeno/screens/games/memory_garden_game.dart';
@@ -86,6 +88,10 @@ class HomeScreen extends ConsumerWidget {
 
               // ── CogniPulse summary card ─────────────────────────────
               GlassCard(
+                onTap: () {
+                  HapticFeedback.lightImpact();
+                  showScoreBreakdownSheet(context);
+                },
                 child: Row(
                   children: [
                     // Score ring
@@ -127,7 +133,10 @@ class HomeScreen extends ConsumerWidget {
                             style: AppTheme.headlineMed,
                           ),
                           const SizedBox(height: 2),
-                          Row(
+                          Wrap(
+                            spacing: 8,
+                            runSpacing: 4,
+                            crossAxisAlignment: WrapCrossAlignment.center,
                             children: [
                               Text(
                                 personality.mood.label,
@@ -136,9 +145,18 @@ class HomeScreen extends ConsumerWidget {
                                   fontWeight: FontWeight.w600,
                                 ),
                               ),
-                              const SizedBox(width: 8),
-                              _DeltaChip(delta: state.scoreDelta),
+                              if (state.scoreOverride != null)
+                                const _OverrideChip()
+                              else if (state.scoreDelta != 0)
+                                _DeltaChip(delta: state.scoreDelta),
                             ],
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            state.breakdown.hasCheckInToday
+                                ? 'Tap to see why'
+                                : 'No check-ins yet today · tap to see why',
+                            style: AppTheme.caption,
                           ),
                         ],
                       ),
@@ -152,6 +170,14 @@ class HomeScreen extends ConsumerWidget {
               )
                   .animate()
                   .fadeIn(duration: 500.ms, delay: 300.ms)
+                  .slideY(begin: 0.05),
+
+              const SizedBox(height: AppTheme.md),
+
+              // ── Self-reported mood ──────────────────────────────────
+              const QuickMoodLog()
+                  .animate()
+                  .fadeIn(duration: 500.ms, delay: 350.ms)
                   .slideY(begin: 0.05),
 
               const SizedBox(height: AppTheme.md),
@@ -173,7 +199,7 @@ class HomeScreen extends ConsumerWidget {
                       icon: Icons.auto_awesome_rounded,
                       label: 'Daily Quest',
                       color: AppTheme.primaryLight,
-                      onTap: () {},
+                      onTap: () => context.go('/quests'),
                     ),
                   ),
                 ],
@@ -186,12 +212,7 @@ class HomeScreen extends ConsumerWidget {
 
               // ── Streak banner ───────────────────────────────────────
               // ── Mochi game suggestion ────────────────────────────
-              _MochiGameSuggestion(
-                score: score,
-                stressIndex: state.weekReadings.last.stressIndex / 100,
-                focusScore: state.weekReadings.last.focusLevel / 100,
-                moodScore: state.weekReadings.last.moodScore / 100,
-              ),
+              _MochiGameSuggestion(gameId: state.recommendedGameId),
               const SizedBox(height: AppTheme.md),
 
               if (state.user.currentStreak > 0)
@@ -330,50 +351,66 @@ class _QuickAction extends StatelessWidget {
   }
 }
 
-class _MochiGameSuggestion extends StatelessWidget {
-  final int score;
-  final double stressIndex;
-  final double focusScore;
-  final double moodScore;
+/// Shown while the developer panel pins the score, so a demo never passes
+/// off a made-up number as a measured one.
+class _OverrideChip extends StatelessWidget {
+  const _OverrideChip();
 
-  const _MochiGameSuggestion({
-    required this.score,
-    required this.stressIndex,
-    required this.focusScore,
-    required this.moodScore,
-  });
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+      decoration: BoxDecoration(
+        color: AppTheme.error.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Text(
+        'Demo override',
+        style: AppTheme.labelSmall.copyWith(
+          color: AppTheme.error,
+          fontWeight: FontWeight.w700,
+        ),
+      ),
+    );
+  }
+}
+
+class _MochiGameSuggestion extends StatelessWidget {
+  final String gameId;
+
+  const _MochiGameSuggestion({required this.gameId});
 
   ({String title, String message, IconData icon, Widget game}) _suggestion() {
-    if (stressIndex > 0.7 || score < 30) {
-      return (
-        title: 'Wave Sync',
-        message: 'Mochi thinks some breathing would help right now',
-        icon: Icons.waves_rounded,
-        game: const WaveSyncGame(),
-      );
+    switch (gameId) {
+      case 'wave_sync':
+        return (
+          title: 'Wave Sync',
+          message: 'Mochi thinks some breathing would help right now',
+          icon: Icons.waves_rounded,
+          game: const WaveSyncGame(),
+        );
+      case 'focus_flicker':
+        return (
+          title: 'Focus Flicker',
+          message: 'Mochi noticed your focus could use a boost',
+          icon: Icons.visibility_rounded,
+          game: const FocusFlickerGame(),
+        );
+      case 'memory_garden':
+        return (
+          title: 'Memory Garden',
+          message: "Let's plant some memories together",
+          icon: Icons.local_florist_rounded,
+          game: const MemoryGardenGame(),
+        );
+      default:
+        return (
+          title: 'Bubble Drift',
+          message: 'Mochi wants to play! Pop some bubbles?',
+          icon: Icons.bubble_chart_rounded,
+          game: const BubbleDriftGame(),
+        );
     }
-    if (focusScore < 0.3) {
-      return (
-        title: 'Focus Flicker',
-        message: 'Mochi noticed your focus could use a boost',
-        icon: Icons.visibility_rounded,
-        game: const FocusFlickerGame(),
-      );
-    }
-    if (moodScore < 0.4) {
-      return (
-        title: 'Memory Garden',
-        message: "Let's plant some memories together",
-        icon: Icons.local_florist_rounded,
-        game: const MemoryGardenGame(),
-      );
-    }
-    return (
-      title: 'Bubble Drift',
-      message: 'Mochi wants to play! Pop some bubbles?',
-      icon: Icons.bubble_chart_rounded,
-      game: const BubbleDriftGame(),
-    );
   }
 
   @override
@@ -382,7 +419,7 @@ class _MochiGameSuggestion extends StatelessWidget {
     return GestureDetector(
       onTap: () {
         HapticFeedback.lightImpact();
-        Navigator.of(context).push(
+        Navigator.of(context, rootNavigator: true).push(
           MaterialPageRoute(builder: (_) => s.game),
         );
       },

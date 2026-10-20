@@ -1,4 +1,4 @@
-import 'package:zeno/models/cognipulse_reading.dart';
+import 'package:zeno/models/signal_reading.dart';
 
 class FaceScanEntry {
   final String id;
@@ -39,13 +39,12 @@ class FaceScanEntry {
   double get faceCoverage =>
       framesProcessed == 0 ? 0 : faceDetectedFrames / framesProcessed;
 
-  CogniPulseReading toReading() => CogniPulseReading(
-        date: scannedAt,
+  SignalReading toSignal() => SignalReading(
+        type: SignalType.faceScan,
         score: score,
-        stressIndex: stressIndex,
-        focusLevel: focusLevel,
-        moodScore: moodScore,
-        source: 'face_scan',
+        at: scannedAt,
+        stress: stressIndex,
+        mood: moodScore,
         note: mochiInsight,
       );
 

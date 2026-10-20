@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:zeno/models/baseline.dart';
 import 'package:zeno/providers/app_state_provider.dart';
+import 'package:zeno/screens/onboarding/baseline_page.dart';
 import 'package:zeno/screens/onboarding/onboarding_pages.dart';
 
-// Pages: 0=Welcome, 1=Name, 2=ChooseCompanion, 3=Permissions, 4=MeetMochi
+// Pages: 0=Welcome, 1=Name, 2=ChooseCompanion, 3=Baseline, 4=Permissions,
+// 5=MeetMochi
 class OnboardingFlow extends ConsumerStatefulWidget {
   const OnboardingFlow({super.key});
   @override
@@ -16,13 +19,22 @@ class _OnboardingFlowState extends ConsumerState<OnboardingFlow> {
   int _page = 0;
   String _name = '';
 
+  static const _pageCount = 6;
+
   void _next() {
-    if (_page < 4) {
+    if (_page < _pageCount - 1) {
       _ctrl.nextPage(
           duration: const Duration(milliseconds: 350), curve: Curves.easeInOut);
     } else {
       _finish();
     }
+  }
+
+  Future<void> _saveBaseline(List<int> answers) async {
+    await ref.read(appStateProvider.notifier).saveBaseline(
+          BaselineResult(answers: answers, at: DateTime.now()),
+        );
+    if (mounted) _next();
   }
 
   Future<void> _finish() async {
@@ -55,9 +67,11 @@ class _OnboardingFlowState extends ConsumerState<OnboardingFlow> {
                 if (_page == 2) _next();
               },
             ),
-            // 3 — Permissions
+            // 3 — Baseline questionnaire (starting score)
+            BaselinePage(onComplete: _saveBaseline),
+            // 4 — Permissions
             PermissionsPage(onNext: _next),
-            // 4 — Meet Mochi (reveal animation + greeting)
+            // 5 — Meet Mochi (reveal animation + greeting)
             MeetMochiPage(name: _name, onFinish: _finish),
           ],
         ),
@@ -66,10 +80,10 @@ class _OnboardingFlowState extends ConsumerState<OnboardingFlow> {
           top: MediaQuery.of(context).padding.top + 16,
           left: 0,
           right: 0,
-          child: _OnboardingDots(current: _page, total: 5),
+          child: _OnboardingDots(current: _page, total: _pageCount),
         ),
         // Skip button (hidden on MeetMochi page)
-        if (_page < 4)
+        if (_page < _pageCount - 1)
           Positioned(
             top: MediaQuery.of(context).padding.top + 12,
             right: 16,

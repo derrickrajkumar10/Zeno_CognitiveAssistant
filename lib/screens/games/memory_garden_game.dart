@@ -149,7 +149,9 @@ class _MemoryGardenPlayState extends State<_MemoryGardenPlay> {
         widget.controller.endGame(score: score, levelReached: _round);
       } else {
         _round++;
-        Future.delayed(const Duration(milliseconds: 600), _startRound);
+        Future.delayed(const Duration(milliseconds: 600), () {
+          if (mounted) _startRound();
+        });
       }
     }
 

@@ -54,9 +54,11 @@ class _MochiWidgetState extends ConsumerState<MochiWidget>
   void initState() {
     super.initState();
 
-    // Breathing — continuous gentle pulse
-    _breathCtrl = AnimationController(vsync: this, duration: 2500.ms)
-      ..repeat(reverse: true);
+    // Breathing — continuous pulse whose pace follows the mood
+    _breathCtrl = AnimationController(
+      vsync: this,
+      duration: ref.read(mochiMoodProvider).breathPeriod,
+    )..repeat(reverse: true);
     _breathAnim = CurvedAnimation(parent: _breathCtrl, curve: Curves.easeInOut);
 
     // Blink — triggered randomly
@@ -146,6 +148,12 @@ class _MochiWidgetState extends ConsumerState<MochiWidget>
 
   @override
   Widget build(BuildContext context) {
+    ref.listen<MochiMoodState>(mochiMoodProvider, (previous, next) {
+      if (previous != next) {
+        _breathCtrl.duration = next.breathPeriod;
+        _breathCtrl.repeat(reverse: true);
+      }
+    });
     final score = ref.watch(appStateProvider).cogniPulseScore;
     final mood = MochiMoodStateX.fromScore(score);
     final size = widget.size;

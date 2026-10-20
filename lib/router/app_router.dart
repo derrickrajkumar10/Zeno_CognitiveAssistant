@@ -13,12 +13,12 @@ import 'package:zeno/screens/splash/splash_screen.dart';
 import 'package:zeno/screens/games/playroom_screen.dart';
 
 final routerProvider = Provider<GoRouter>((ref) {
-  final onboarded =
-      ref.watch(appStateProvider.select((s) => s.onboardingComplete));
-
-  return GoRouter(
+  // Read onboarding state at redirect time instead of watching it: rebuilding
+  // the router would restart navigation at /splash.
+  final router = GoRouter(
     initialLocation: '/splash',
     redirect: (context, state) {
+      final onboarded = ref.read(appStateProvider).onboardingComplete;
       final isSplash = state.matchedLocation == '/splash';
       final isOnboarding = state.matchedLocation.startsWith('/onboarding');
       if (!onboarded && !isSplash && !isOnboarding) {
@@ -73,6 +73,8 @@ final routerProvider = Provider<GoRouter>((ref) {
       ),
     ],
   );
+  ref.onDispose(router.dispose);
+  return router;
 });
 
 CustomTransitionPage<void> _fadePage(GoRouterState state, Widget child) {

@@ -82,20 +82,32 @@ class GameWrapperState extends ConsumerState<GameWrapper> {
     _levelReached = levelReached;
     _completedNaturally = !dropOffEarly;
 
-    final session = await _collector.flushSession(
-      gameId: widget.gameId,
-      levelReached: levelReached,
-      dropOffEarly: dropOffEarly,
-    );
-    final touchEvents = _collector.takeLastFlushedEvents();
+    // A storage failure must never trap the player in a finished game, so
+    // the results screen is shown even if saving the session fails.
+    try {
+      final session = await _collector.flushSession(
+        gameId: widget.gameId,
+        levelReached: levelReached,
+        dropOffEarly: dropOffEarly,
+      );
+      final touchEvents = _collector.takeLastFlushedEvents();
 
-    await _repo.saveSession(session);
-    await _repo.saveTouchEvents(touchEvents);
-    await _repo.updateBaseline(session.userId, widget.gameId);
+      await _repo.saveSession(session);
+      await _repo.saveTouchEvents(touchEvents);
+      await _repo.updateBaseline(session.userId, widget.gameId);
 
-    final adjustment = await _contributor.computeAdjustment(session.userId);
-    if (!dropOffEarly) {
-      ref.read(appStateProvider.notifier).applyGameContribution(adjustment);
+      final signalScore = await _contributor.computeSignalScore(session.userId);
+      if (mounted) {
+        await ref.read(appStateProvider.notifier).recordGameResult(
+              gameId: widget.gameId,
+              xpReward: widget.xpReward,
+              completed: !dropOffEarly,
+              signalScore: signalScore,
+            );
+      }
+    } catch (error, stackTrace) {
+      debugPrint('GameWrapper could not save session: $error');
+      debugPrintStack(stackTrace: stackTrace);
     }
 
     if (mounted) {
@@ -140,7 +152,7 @@ class GameWrapperState extends ConsumerState<GameWrapper> {
         child: PostGameScreen(
           gameTitle: widget.gameTitle,
           score: _gameScore,
-          xpEarned: widget.xpReward,
+          xpEarned: _completedNaturally ? widget.xpReward : 0,
           levelReached: _levelReached,
           onPlayAgain: _playAgain,
           onExit: () => Navigator.of(context).pop(_completedNaturally),

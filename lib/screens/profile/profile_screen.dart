@@ -1,12 +1,18 @@
 import 'dart:ui';
 import 'package:flutter/material.dart' hide Badge;
 import 'package:flutter_animate/flutter_animate.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:zeno/mock_data.dart';
+import 'package:go_router/go_router.dart';
 import 'package:zeno/providers/app_state_provider.dart';
+import 'package:zeno/screens/developer/developer_panel.dart';
+import 'package:zeno/services/weekly_letter.dart';
 import 'package:zeno/theme/app_theme.dart';
+import 'package:zeno/widgets/about_zeno_sheet.dart';
+import 'package:zeno/widgets/edit_name_dialog.dart';
 import 'package:zeno/widgets/glass_card.dart';
 import 'package:zeno/widgets/mochi_widget.dart';
+import 'package:zeno/widgets/reset_data_dialog.dart';
 
 class ProfileScreen extends ConsumerWidget {
   const ProfileScreen({super.key});
@@ -31,9 +37,16 @@ class ProfileScreen extends ConsumerWidget {
           Center(
             child: Column(
               children: [
-                const MochiWidget(size: 100, interactive: false),
+                // Long-press Mochi for the hidden developer tools.
+                GestureDetector(
+                  onLongPress: () => _openDeveloperPanel(context),
+                  child: const MochiWidget(size: 100, interactive: false),
+                ),
                 const SizedBox(height: AppTheme.md),
-                Text(user.name, style: AppTheme.displayMedium),
+                GestureDetector(
+                  onTap: () => _editName(context, ref),
+                  child: Text(user.name, style: AppTheme.displayMedium),
+                ),
                 const SizedBox(height: 4),
                 Text(
                   'Level ${user.level}',
@@ -110,7 +123,7 @@ class ProfileScreen extends ConsumerWidget {
               Expanded(
                 child: _StatTile(
                   icon: Icons.insights_rounded,
-                  value: user.avgCogniPulse.toStringAsFixed(0),
+                  value: user.avgCogniPulse?.toStringAsFixed(0) ?? '--',
                   label: 'Avg CP',
                   color: AppTheme.info,
                 ),
@@ -163,6 +176,16 @@ class ProfileScreen extends ConsumerWidget {
                         ),
                       ),
                     ),
+                    if (!badge.unlocked) ...[
+                      const SizedBox(width: 6),
+                      Text(
+                        '${badge.current}/${badge.target}',
+                        style: AppTheme.caption.copyWith(
+                          color: AppTheme.primaryLight,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
                   ],
                 ),
               ).animate().fadeIn(duration: 400.ms, delay: (400 + idx * 60).ms);
@@ -173,7 +196,16 @@ class ProfileScreen extends ConsumerWidget {
 
           // ── Weekly Letter ───────────────────────────────────────
           GlassCard(
-            onTap: () => _showWeeklyLetter(context),
+            onTap: () => _showWeeklyLetter(
+              context,
+              WeeklyLetter.write(
+                name: user.name,
+                signals: state.signals,
+                baseline: state.baseline,
+                xpEvents: state.xpEvents,
+                now: state.asOf,
+              ),
+            ),
             tint: AppTheme.accentSoft.withOpacity(0.3),
             child: Row(
               children: [
@@ -217,23 +249,52 @@ class ProfileScreen extends ConsumerWidget {
           const SizedBox(height: AppTheme.md),
 
           _SettingsTile(
-            icon: Icons.notifications_rounded,
-            label: 'Notifications',
+            icon: Icons.edit_rounded,
+            label: 'Edit name',
+            onTap: () => _editName(context, ref),
           ).animate().fadeIn(duration: 400.ms, delay: 750.ms),
-          _SettingsTile(
-            icon: Icons.palette_rounded,
-            label: 'Appearance',
-          ).animate().fadeIn(duration: 400.ms, delay: 800.ms),
           _SettingsTile(
             icon: Icons.info_rounded,
             label: 'About ZENO',
+            onTap: () => showAboutZenoSheet(context),
+          ).animate().fadeIn(duration: 400.ms, delay: 800.ms),
+          _SettingsTile(
+            icon: Icons.delete_forever_rounded,
+            label: 'Reset all data',
+            color: AppTheme.error,
+            onTap: () => _confirmReset(context, ref),
           ).animate().fadeIn(duration: 400.ms, delay: 850.ms),
         ],
       ),
     );
   }
 
-  void _showWeeklyLetter(BuildContext context) {
+  Future<void> _editName(BuildContext context, WidgetRef ref) async {
+    HapticFeedback.lightImpact();
+    final name = await showEditNameDialog(
+      context,
+      current: ref.read(appStateProvider).user.name,
+    );
+    if (name != null) {
+      await ref.read(appStateProvider.notifier).updateUserName(name);
+    }
+  }
+
+  Future<void> _confirmReset(BuildContext context, WidgetRef ref) async {
+    final reset = await confirmAndResetAllData(context, ref);
+    if (reset && context.mounted) {
+      context.go('/onboarding');
+    }
+  }
+
+  void _openDeveloperPanel(BuildContext context) {
+    HapticFeedback.mediumImpact();
+    Navigator.of(context, rootNavigator: true).push(
+      MaterialPageRoute<void>(builder: (_) => const DeveloperPanel()),
+    );
+  }
+
+  void _showWeeklyLetter(BuildContext context, String letter) {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -271,7 +332,7 @@ class ProfileScreen extends ConsumerWidget {
                   Text('Mochi\'s Letter', style: AppTheme.displaySmall),
                   const SizedBox(height: AppTheme.lg),
                   Text(
-                    MockData.currentWeeklyLetter,
+                    letter,
                     style: AppTheme.bodyLarge.copyWith(height: 1.7),
                   ),
                 ],
@@ -317,10 +378,14 @@ class _StatTile extends StatelessWidget {
 class _SettingsTile extends StatelessWidget {
   final IconData icon;
   final String label;
+  final VoidCallback onTap;
+  final Color color;
 
   const _SettingsTile({
     required this.icon,
     required this.label,
+    required this.onTap,
+    this.color = AppTheme.textSecondary,
   });
 
   @override
@@ -328,11 +393,12 @@ class _SettingsTile extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.only(bottom: AppTheme.sm),
       child: GlassCard(
+        onTap: onTap,
         padding:
             const EdgeInsets.symmetric(horizontal: AppTheme.md, vertical: 14),
         child: Row(
           children: [
-            Icon(icon, color: AppTheme.textSecondary, size: 20),
+            Icon(icon, color: color, size: 20),
             const SizedBox(width: AppTheme.md),
             Text(label, style: AppTheme.bodyMedium),
             const Spacer(),
