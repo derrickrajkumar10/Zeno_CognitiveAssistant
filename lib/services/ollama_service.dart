@@ -7,21 +7,37 @@ import 'package:zeno/models/mochi_state.dart';
 import 'package:zeno/providers/app_state_provider.dart';
 import 'package:zeno/services/face_scan_context_builder.dart';
 import 'package:zeno/services/game_context_builder.dart';
+import 'package:zeno/services/ollama_settings.dart';
 
 class OllamaService {
-  static const String _baseUrl = 'http://localhost:11434';
   static const String _model = 'llama3.2';
   static const Duration _timeout = Duration(seconds: 3);
 
+  final String baseUrl;
+  final http.Client _client;
   final GameContextBuilder _gameContextBuilder;
   final FaceScanContextBuilder _faceScanContextBuilder;
 
   OllamaService({
+    this.baseUrl = 'http://localhost:11434',
+    http.Client? client,
     GameContextBuilder? gameContextBuilder,
     FaceScanContextBuilder? faceScanContextBuilder,
-  })  : _gameContextBuilder = gameContextBuilder ?? GameContextBuilder(),
+  })  : _client = client ?? http.Client(),
+        _gameContextBuilder = gameContextBuilder ?? GameContextBuilder(),
         _faceScanContextBuilder = faceScanContextBuilder ??
             const FaceScanContextBuilder(latestFaceScan: null);
+
+  /// True when an Ollama server answers at [baseUrl] within the timeout.
+  Future<bool> ping() async {
+    try {
+      final response =
+          await _client.get(Uri.parse('$baseUrl/api/tags')).timeout(_timeout);
+      return response.statusCode == 200;
+    } catch (_) {
+      return false;
+    }
+  }
 
   Future<String> getMochiDialogue({
     required int cogniPulseScore,
@@ -32,9 +48,9 @@ class OllamaService {
     try {
       final gameContext = await _gameContextBuilder.buildGameContext(userId: userId);
       final faceScanContext = _faceScanContextBuilder.buildFaceScanContext();
-      final response = await http
+      final response = await _client
           .post(
-            Uri.parse('$_baseUrl/api/generate'),
+            Uri.parse('$baseUrl/api/generate'),
             headers: {'Content-Type': 'application/json'},
             body: jsonEncode({
               'model': _model,
@@ -78,6 +94,7 @@ final ollamaServiceProvider = Provider<OllamaService>((ref) {
   final latestFaceScan =
       ref.watch(appStateProvider.select((state) => state.latestFaceScan));
   return OllamaService(
+    baseUrl: ref.watch(ollamaHostProvider),
     faceScanContextBuilder: FaceScanContextBuilder(
       latestFaceScan: latestFaceScan,
     ),
