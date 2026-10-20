@@ -21,12 +21,12 @@ class InsightCorrelationCard extends StatelessWidget {
     return Container(
       decoration: BoxDecoration(
         gradient: LinearGradient(
-          colors: gradientColors.map((c) => c.withOpacity(0.15)).toList(),
+          colors: gradientColors.map((c) => c.withValues(alpha: 0.15)).toList(),
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
         borderRadius: BorderRadius.circular(AppTheme.cardRadius),
-        border: Border.all(color: gradientColors[0].withOpacity(0.3), width: 1),
+        border: Border.all(color: gradientColors[0].withValues(alpha: 0.3), width: 1),
       ),
       child: GlassCard(
         tint: Colors.transparent, // Let gradient show through
@@ -37,7 +37,7 @@ class InsightCorrelationCard extends StatelessWidget {
             Container(
               padding: const EdgeInsets.all(10),
               decoration: BoxDecoration(
-                color: gradientColors[0].withOpacity(0.2),
+                color: gradientColors[0].withValues(alpha: 0.2),
                 shape: BoxShape.circle,
               ),
               child: Icon(icon, color: gradientColors[0], size: 22),

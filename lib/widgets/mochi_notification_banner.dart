@@ -56,7 +56,7 @@ class MochiNotificationBannerState extends State<MochiNotificationBanner>
                   width: 28,
                   height: 28,
                   decoration: BoxDecoration(
-                    color: AppTheme.primaryLight.withOpacity(0.15),
+                    color: AppTheme.primaryLight.withValues(alpha: 0.15),
                     borderRadius: BorderRadius.circular(8),
                   ),
                   alignment: Alignment.center,

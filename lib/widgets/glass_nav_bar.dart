@@ -51,11 +51,11 @@ class GlassNavBar extends StatelessWidget {
                 color: AppTheme.surfaceBorder,
                 width: 0.5,
               ),
-              boxShadow: [
+              boxShadow: const [
                 BoxShadow(
-                  color: const Color(0x08000000),
+                  color: Color(0x08000000),
                   blurRadius: 24,
-                  offset: const Offset(0, -4),
+                  offset: Offset(0, -4),
                 ),
               ],
             ),
@@ -129,7 +129,7 @@ class _NavBarButton extends StatelessWidget {
                 boxShadow: active
                     ? [
                         BoxShadow(
-                          color: AppTheme.primary.withOpacity(0.4),
+                          color: AppTheme.primary.withValues(alpha: 0.4),
                           blurRadius: 6,
                           spreadRadius: 1,
                         ),

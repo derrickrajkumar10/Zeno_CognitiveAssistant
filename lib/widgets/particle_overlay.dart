@@ -113,7 +113,7 @@ class _ParticlePainter extends CustomPainter {
       canvas.drawCircle(
         Offset(p.x * size.width, p.y * size.height),
         p.size,
-        Paint()..color = p.color.withOpacity(p.opacity.clamp(0.0, 1.0)),
+        Paint()..color = p.color.withValues(alpha: p.opacity.clamp(0.0, 1.0)),
       );
     }
   }

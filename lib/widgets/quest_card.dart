@@ -23,10 +23,10 @@ class QuestCard extends StatelessWidget {
 
     return GlassCard(
       tint: completed
-          ? AppTheme.primarySoft.withOpacity(0.5)
+          ? AppTheme.primarySoft.withValues(alpha: 0.5)
           : AppTheme.surfaceGlass,
       borderColor: completed
-          ? AppTheme.primaryLight.withOpacity(0.4)
+          ? AppTheme.primaryLight.withValues(alpha: 0.4)
           : AppTheme.surfaceBorder,
       margin: const EdgeInsets.only(bottom: AppTheme.sm),
       onTap: completed
@@ -43,7 +43,7 @@ class QuestCard extends StatelessWidget {
             height: 44,
             decoration: BoxDecoration(
               color: completed
-                  ? AppTheme.primaryLight.withOpacity(0.15)
+                  ? AppTheme.primaryLight.withValues(alpha: 0.15)
                   : AppTheme.surfaceGlassDim,
               borderRadius: BorderRadius.circular(12),
             ),
@@ -81,7 +81,7 @@ class QuestCard extends StatelessWidget {
             Container(
               width: 28,
               height: 28,
-              decoration: BoxDecoration(
+              decoration: const BoxDecoration(
                 shape: BoxShape.circle,
                 color: AppTheme.primaryLight,
               ),
@@ -95,7 +95,7 @@ class QuestCard extends StatelessWidget {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
               decoration: BoxDecoration(
-                color: AppTheme.accent.withOpacity(0.12),
+                color: AppTheme.accent.withValues(alpha: 0.12),
                 borderRadius: BorderRadius.circular(8),
               ),
               child: Text(

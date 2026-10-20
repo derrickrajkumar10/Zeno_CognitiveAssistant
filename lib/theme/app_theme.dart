@@ -197,16 +197,16 @@ class AppTheme {
 
   /// Subtle shadow for elevated elements
   static List<BoxShadow> get softShadow => [
-        BoxShadow(
-          color: const Color(0x0A000000),
+        const BoxShadow(
+          color: Color(0x0A000000),
           blurRadius: 20,
-          offset: const Offset(0, 4),
+          offset: Offset(0, 4),
           spreadRadius: 0,
         ),
-        BoxShadow(
-          color: const Color(0x05000000),
+        const BoxShadow(
+          color: Color(0x05000000),
           blurRadius: 6,
-          offset: const Offset(0, 2),
+          offset: Offset(0, 2),
           spreadRadius: 0,
         ),
       ];
@@ -214,7 +214,7 @@ class AppTheme {
   /// Primary accent shadow (for CTA buttons)
   static List<BoxShadow> accentShadow(Color color) => [
         BoxShadow(
-          color: color.withOpacity(0.25),
+          color: color.withValues(alpha: 0.25),
           blurRadius: 16,
           offset: const Offset(0, 6),
           spreadRadius: -2,

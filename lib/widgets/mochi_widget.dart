@@ -35,20 +35,16 @@ class _MochiWidgetState extends ConsumerState<MochiWidget>
   // ── Animation controllers ──────────────────────────────────────────────
   late final AnimationController _breathCtrl;
   late final AnimationController _blinkCtrl;
-  late final AnimationController _lookCtrl;
   late final AnimationController _tapCtrl;
   late final AnimationController _earCtrl;
 
   // ── Animation values ───────────────────────────────────────────────────
   late final Animation<double> _breathAnim;
   late final Animation<double> _blinkAnim;
-  late final Animation<Offset> _lookAnim;
   late final Animation<double> _tapAnim;
 
   // ── State ──────────────────────────────────────────────────────────────
-  bool _isBlinking = false;
   Offset _eyeOffset = Offset.zero;
-  int _tapCount = 0;
 
   @override
   void initState() {
@@ -70,17 +66,12 @@ class _MochiWidgetState extends ConsumerState<MochiWidget>
       if (status == AnimationStatus.completed) {
         _blinkCtrl.reverse();
       } else if (status == AnimationStatus.dismissed) {
-        setState(() => _isBlinking = false);
         _scheduleBlink();
       }
     });
     _scheduleBlink();
 
     // Looking around — random eye drift
-    _lookCtrl = AnimationController(vsync: this, duration: 2000.ms);
-    _lookAnim = Tween<Offset>(begin: Offset.zero, end: Offset.zero).animate(
-      CurvedAnimation(parent: _lookCtrl, curve: Curves.easeInOut),
-    );
     _scheduleLook();
 
     // Tap reaction — spring bounce
@@ -101,7 +92,6 @@ class _MochiWidgetState extends ConsumerState<MochiWidget>
     final delay = 2500 + Random().nextInt(4000);
     Future.delayed(Duration(milliseconds: delay), () {
       if (!mounted) return;
-      setState(() => _isBlinking = true);
       _blinkCtrl.forward();
     });
   }
@@ -130,7 +120,6 @@ class _MochiWidgetState extends ConsumerState<MochiWidget>
     if (!widget.interactive) return;
     HapticFeedback.lightImpact();
     _tapCtrl.forward(from: 0);
-    _tapCount++;
 
     // Cycle to next dialogue on tap
     ref.read(appStateProvider.notifier).cycleDialogue();
@@ -140,7 +129,6 @@ class _MochiWidgetState extends ConsumerState<MochiWidget>
   void dispose() {
     _breathCtrl.dispose();
     _blinkCtrl.dispose();
-    _lookCtrl.dispose();
     _tapCtrl.dispose();
     _earCtrl.dispose();
     super.dispose();
@@ -246,7 +234,7 @@ class _MochiPainter extends CustomPainter {
     canvas.drawCircle(Offset(cx, cy), bodyR, bodyPaint);
 
     // ── Belly patch ──────────────────────────────────────────────────────
-    final bellyPaint = Paint()..color = Colors.white.withOpacity(0.25);
+    final bellyPaint = Paint()..color = Colors.white.withValues(alpha: 0.25);
     canvas.drawOval(
       Rect.fromCenter(
         center: Offset(cx, cy + bodyR * 0.2),
@@ -385,7 +373,7 @@ class _MochiPainter extends CustomPainter {
       canvas.drawCircle(
         Offset(x + pupilR * 0.25, y + pupilR * 0.15),
         pupilR * 0.15,
-        Paint()..color = Colors.white.withOpacity(0.7),
+        Paint()..color = Colors.white.withValues(alpha: 0.7),
       );
     }
     if (mood == MochiMoodState.drifting || mood == MochiMoodState.struggling) {
