@@ -1,3 +1,5 @@
+import 'package:flutter/widgets.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:zeno/models/baseline.dart';
@@ -110,5 +112,33 @@ void main() {
 
     await prefs.setString(FaceScanRepository.storageKey, '[{"id": 7}]');
     expect(notifier().state.faceScans, isEmpty);
+  });
+
+  testWidgets('coming back to the app on a new day resets today',
+      (tester) async {
+    var clockNow = DateTime(2026, 10, 16, 23, 50);
+    final container = ProviderContainer(overrides: [
+      sharedPreferencesProvider.overrideWithValue(prefs),
+      appClockProvider.overrideWithValue(() => clockNow),
+    ]);
+    addTearDown(container.dispose);
+
+    await container.read(appStateProvider.notifier).completeQuest('walk');
+    expect(container.read(appStateProvider).questsDoneToday, contains('walk'));
+
+    clockNow = DateTime(2026, 10, 17, 8);
+    for (final lifecycle in const [
+      AppLifecycleState.inactive,
+      AppLifecycleState.hidden,
+      AppLifecycleState.paused,
+      AppLifecycleState.hidden,
+      AppLifecycleState.inactive,
+      AppLifecycleState.resumed,
+    ]) {
+      tester.binding.handleAppLifecycleStateChanged(lifecycle);
+    }
+
+    expect(container.read(appStateProvider).questsDoneToday, isEmpty);
+    expect(container.read(appStateProvider).totalXpToday, 0);
   });
 }

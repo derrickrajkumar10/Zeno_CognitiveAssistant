@@ -1,3 +1,4 @@
+import 'package:flutter/widgets.dart' show AppLifecycleListener;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:zeno/mock_data.dart';
@@ -376,10 +377,18 @@ class AppStateNotifier extends StateNotifier<AppState> {
   }
 }
 
+/// The time source for app state; tests override it.
+final appClockProvider = Provider<DateTime Function()>((ref) => DateTime.now);
+
 final appStateProvider =
     StateNotifierProvider<AppStateNotifier, AppState>((ref) {
   final prefs = ref.watch(sharedPreferencesProvider);
-  return AppStateNotifier(prefs);
+  final notifier = AppStateNotifier(prefs, clock: ref.watch(appClockProvider));
+  // Coming back to the app after midnight starts a new day: quests, today's
+  // XP and today's score are re-derived for the current date.
+  final lifecycle = AppLifecycleListener(onResume: notifier.refreshClock);
+  ref.onDispose(lifecycle.dispose);
+  return notifier;
 });
 
 // ── Derived Providers ─────────────────────────────────────────────────
