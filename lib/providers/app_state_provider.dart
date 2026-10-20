@@ -11,6 +11,7 @@ import 'package:zeno/models/user_profile.dart';
 import 'package:zeno/models/xp_event.dart';
 import 'package:zeno/services/cognipulse_engine.dart';
 import 'package:zeno/services/face_scan_repository.dart';
+import 'package:zeno/services/game_repository.dart';
 import 'package:zeno/services/game_recommender.dart';
 import 'package:zeno/services/progress_engine.dart';
 import 'package:zeno/services/wellness_repository.dart';
@@ -200,14 +201,24 @@ class AppStateNotifier extends StateNotifier<AppState> {
   /// Pre-Phase-1 storage of a mostly mocked week; no longer read.
   static const _legacyWeekReadingsKey = 'zeno.week_readings';
 
+  /// Device settings that survive "Reset all data".
+  static const preservedOnReset = {'zeno.ollama_host'};
+
+  final SharedPreferences _prefs;
   final WellnessRepository _repo;
   final FaceScanRepository _faceScanRepository;
   final DateTime Function() _clock;
+  final Future<void> Function() _clearGameData;
 
-  AppStateNotifier(SharedPreferences prefs, {DateTime Function()? clock})
-      : _repo = WellnessRepository(prefs),
+  AppStateNotifier(
+    SharedPreferences prefs, {
+    DateTime Function()? clock,
+    Future<void> Function()? clearGameData,
+  })  : _prefs = prefs,
+        _repo = WellnessRepository(prefs),
         _faceScanRepository = FaceScanRepository(prefs),
         _clock = clock ?? DateTime.now,
+        _clearGameData = clearGameData ?? GameRepository().clearAll,
         super(_load(prefs, clock ?? DateTime.now));
 
   static AppState _load(SharedPreferences prefs, DateTime Function() clock) {
@@ -232,6 +243,21 @@ class AppStateNotifier extends StateNotifier<AppState> {
       onboardingComplete: prefs.getBool('onboarding_complete') ?? false,
       isOllamaLive: false,
     );
+  }
+
+  /// Deletes everything the user has logged (check-ins, XP, baseline, name,
+  /// face scans, game history) and returns the app to a fresh install.
+  Future<void> resetAllData() async {
+    final keys = _prefs
+        .getKeys()
+        .where((key) => key.startsWith('zeno.') && !preservedOnReset.contains(key))
+        .toList();
+    for (final key in keys) {
+      await _prefs.remove(key);
+    }
+    await _prefs.remove('onboarding_complete');
+    await _clearGameData();
+    state = _load(_prefs, _clock);
   }
 
   /// Re-derives everything for the current time, e.g. after midnight.

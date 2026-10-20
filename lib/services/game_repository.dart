@@ -121,6 +121,23 @@ class GameRepository {
     ''');
   }
 
+  /// Deletes every stored session, baseline and touch event.
+  Future<void> clearAll() async {
+    if (await _shouldUsePrefs()) {
+      final prefs = await _preferences;
+      for (final key in [_sessionsPrefsKey, _baselinesPrefsKey, _touchEventsPrefsKey]) {
+        await prefs.remove(key);
+      }
+      return;
+    }
+    final db = await database;
+    await db.transaction((txn) async {
+      await txn.delete('game_sessions');
+      await txn.delete('game_baselines');
+      await txn.delete('game_touch_events');
+    });
+  }
+
   Future<void> saveSession(GameSession session) async {
     if (await _shouldUsePrefs()) {
       final rows = await _readPrefsRows(_sessionsPrefsKey);

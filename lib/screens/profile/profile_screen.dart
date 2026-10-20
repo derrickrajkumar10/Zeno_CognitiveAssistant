@@ -1,10 +1,14 @@
 import 'dart:ui';
 import 'package:flutter/material.dart' hide Badge;
 import 'package:flutter_animate/flutter_animate.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:zeno/providers/app_state_provider.dart';
 import 'package:zeno/services/weekly_letter.dart';
 import 'package:zeno/theme/app_theme.dart';
+import 'package:zeno/widgets/about_zeno_sheet.dart';
+import 'package:zeno/widgets/edit_name_dialog.dart';
 import 'package:zeno/widgets/glass_card.dart';
 import 'package:zeno/widgets/mochi_widget.dart';
 
@@ -33,7 +37,10 @@ class ProfileScreen extends ConsumerWidget {
               children: [
                 const MochiWidget(size: 100, interactive: false),
                 const SizedBox(height: AppTheme.md),
-                Text(user.name, style: AppTheme.displayMedium),
+                GestureDetector(
+                  onTap: () => _editName(context, ref),
+                  child: Text(user.name, style: AppTheme.displayMedium),
+                ),
                 const SizedBox(height: 4),
                 Text(
                   'Level ${user.level}',
@@ -236,20 +243,72 @@ class ProfileScreen extends ConsumerWidget {
           const SizedBox(height: AppTheme.md),
 
           _SettingsTile(
-            icon: Icons.notifications_rounded,
-            label: 'Notifications',
+            icon: Icons.edit_rounded,
+            label: 'Edit name',
+            onTap: () => _editName(context, ref),
           ).animate().fadeIn(duration: 400.ms, delay: 750.ms),
-          _SettingsTile(
-            icon: Icons.palette_rounded,
-            label: 'Appearance',
-          ).animate().fadeIn(duration: 400.ms, delay: 800.ms),
           _SettingsTile(
             icon: Icons.info_rounded,
             label: 'About ZENO',
+            onTap: () => showAboutZenoSheet(context),
+          ).animate().fadeIn(duration: 400.ms, delay: 800.ms),
+          _SettingsTile(
+            icon: Icons.delete_forever_rounded,
+            label: 'Reset all data',
+            color: AppTheme.error,
+            onTap: () => _confirmReset(context, ref),
           ).animate().fadeIn(duration: 400.ms, delay: 850.ms),
         ],
       ),
     );
+  }
+
+  Future<void> _editName(BuildContext context, WidgetRef ref) async {
+    HapticFeedback.lightImpact();
+    final name = await showEditNameDialog(
+      context,
+      current: ref.read(appStateProvider).user.name,
+    );
+    if (name != null) {
+      await ref.read(appStateProvider.notifier).updateUserName(name);
+    }
+  }
+
+  Future<void> _confirmReset(BuildContext context, WidgetRef ref) async {
+    HapticFeedback.lightImpact();
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        backgroundColor: AppTheme.bgElevated,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppTheme.cardRadius),
+        ),
+        title: Text('Reset everything?', style: AppTheme.headlineMed),
+        content: Text(
+          'This deletes your check-ins, scans, games, XP, badges and name '
+          'from this phone, then starts onboarding again. It cannot be undone.',
+          style: AppTheme.bodyMedium,
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            style: TextButton.styleFrom(foregroundColor: AppTheme.error),
+            child: const Text('Reset'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !context.mounted) {
+      return;
+    }
+    await ref.read(appStateProvider.notifier).resetAllData();
+    if (context.mounted) {
+      context.go('/onboarding');
+    }
   }
 
   void _showWeeklyLetter(BuildContext context, String letter) {
@@ -336,10 +395,14 @@ class _StatTile extends StatelessWidget {
 class _SettingsTile extends StatelessWidget {
   final IconData icon;
   final String label;
+  final VoidCallback onTap;
+  final Color color;
 
   const _SettingsTile({
     required this.icon,
     required this.label,
+    required this.onTap,
+    this.color = AppTheme.textSecondary,
   });
 
   @override
@@ -347,11 +410,12 @@ class _SettingsTile extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.only(bottom: AppTheme.sm),
       child: GlassCard(
+        onTap: onTap,
         padding:
             const EdgeInsets.symmetric(horizontal: AppTheme.md, vertical: 14),
         child: Row(
           children: [
-            Icon(icon, color: AppTheme.textSecondary, size: 20),
+            Icon(icon, color: color, size: 20),
             const SizedBox(width: AppTheme.md),
             Text(label, style: AppTheme.bodyMedium),
             const Spacer(),

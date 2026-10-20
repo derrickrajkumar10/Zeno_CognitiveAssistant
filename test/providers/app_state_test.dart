@@ -141,4 +141,31 @@ void main() {
     expect(container.read(appStateProvider).questsDoneToday, isEmpty);
     expect(container.read(appStateProvider).totalXpToday, 0);
   });
+
+  test('reset clears every piece of user data but keeps device settings',
+      () async {
+    await prefs.setBool('onboarding_complete', true);
+    await prefs.setString('zeno.ollama_host', 'http://192.168.1.5:11434');
+    final app = notifier();
+    app.completeOnboarding();
+    await app.updateUserName('Sam');
+    await app.logMood(90);
+    await app.completeQuest('walk');
+    await app.recordBreathingSession();
+    await app.saveBaseline(BaselineResult(answers: const [5, 5, 5, 5, 5], at: now));
+
+    await app.resetAllData();
+
+    for (final state in [app.state, notifier().state]) {
+      expect(state.totalXp, 0);
+      expect(state.signals, isEmpty);
+      expect(state.baseline, isNull);
+      expect(state.counters, isEmpty);
+      expect(state.user.name, AppState.defaultName);
+      expect(state.onboardingComplete, isFalse);
+    }
+    expect(prefs.getBool('onboarding_complete'), isNull);
+    expect(prefs.getString('zeno.ollama_host'), 'http://192.168.1.5:11434');
+  });
 }
+
