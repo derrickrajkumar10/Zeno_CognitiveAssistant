@@ -1,5 +1,8 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:zeno/services/game_feature_pipeline.dart';
+import 'package:zeno/services/game_repository.dart';
+
+import 'game_test_helpers.dart';
 
 class _FixedPipeline extends GameFeaturePipeline {
   final GameFeatureVector vector;
@@ -93,6 +96,55 @@ void main() {
     test('the signal stays between 30 and 90', () async {
       expect(await signalFor(const GameFeatureVector(reactionMsZScore: 99)), 30);
       expect(await signalFor(const GameFeatureVector(reactionMsZScore: -99)), 90);
+    });
+  });
+
+  group('GameFeaturePipeline.compute on stored sessions', () {
+    final repo = GameRepository();
+    final now = DateTime.now();
+
+    setUp(resetGameStore);
+
+    test('no sessions gives the neutral vector', () async {
+      final vector = await GameFeaturePipeline().compute('alex');
+      expect(vector.toMap(), const GameFeatureVector().toMap());
+      expect(vector.stressLoad, 0);
+    });
+
+    test('quitting one game in four gives a 75% completion rate', () async {
+      for (var i = 0; i < 4; i++) {
+        await repo.saveSession(session(
+          id: 's$i',
+          startedAt: now.subtract(Duration(hours: i + 1)),
+          dropOffEarly: i == 2,
+        ));
+      }
+      final vector = await GameFeaturePipeline().compute('alex');
+      expect(vector.sessionCompletionRate, 0.75);
+    });
+
+    test('a latest game slower and sloppier than the week raises stress load',
+        () async {
+      for (var i = 0; i < 4; i++) {
+        await repo.saveSession(session(
+          id: 'calm$i',
+          startedAt: now.subtract(Duration(days: 1, hours: i)),
+          avgReactionMs: 380.0 + i * 10,
+          errorRate: 0.1,
+        ));
+      }
+      await repo.saveSession(session(
+        id: 'latest',
+        startedAt: now.subtract(const Duration(minutes: 5)),
+        avgReactionMs: 900,
+        errorRate: 0.5,
+      ));
+
+      final vector = await GameFeaturePipeline().compute('alex');
+      expect(vector.reactionMsZScore, greaterThan(1));
+      expect(vector.errorRateZScore, greaterThan(1));
+      expect(vector.stressLoad, greaterThan(0));
+      expect(await CogniPulseGameContributor().computeSignalScore('alex'), lessThan(60));
     });
   });
 }

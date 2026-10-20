@@ -120,7 +120,7 @@ class _QuickBreathingCardState extends ConsumerState<QuickBreathingCard>
       curve: Curves.easeOutCubic,
       child: GlassCard(
         padding: const EdgeInsets.all(AppTheme.md),
-        tint: _isActive ? AppTheme.primaryLight.withOpacity(0.05) : null,
+        tint: _isActive ? AppTheme.primaryLight.withValues(alpha: 0.05) : null,
         child: _isActive ? _buildActiveState() : _buildInactiveState(),
       ),
     );
@@ -133,7 +133,7 @@ class _QuickBreathingCardState extends ConsumerState<QuickBreathingCard>
           width: 44,
           height: 44,
           decoration: BoxDecoration(
-            color: AppTheme.primaryLight.withOpacity(0.15),
+            color: AppTheme.primaryLight.withValues(alpha: 0.15),
             shape: BoxShape.circle,
           ),
           child: const Icon(Icons.air_rounded, color: AppTheme.primaryLight),
@@ -159,7 +159,7 @@ class _QuickBreathingCardState extends ConsumerState<QuickBreathingCard>
         ElevatedButton(
           onPressed: _startBreathing,
           style: ElevatedButton.styleFrom(
-            backgroundColor: AppTheme.primaryLight.withOpacity(0.15),
+            backgroundColor: AppTheme.primaryLight.withValues(alpha: 0.15),
             foregroundColor: AppTheme.primaryLight,
             elevation: 0,
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -201,9 +201,9 @@ class _QuickBreathingCardState extends ConsumerState<QuickBreathingCard>
                     height: 100,
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
-                      color: AppTheme.primaryLight.withOpacity(0.2),
+                      color: AppTheme.primaryLight.withValues(alpha: 0.2),
                       border: Border.all(
-                        color: AppTheme.primaryLight.withOpacity(0.5),
+                        color: AppTheme.primaryLight.withValues(alpha: 0.5),
                         width: 2,
                       ),
                     ),

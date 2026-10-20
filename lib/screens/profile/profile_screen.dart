@@ -206,14 +206,14 @@ class ProfileScreen extends ConsumerWidget {
                 now: state.asOf,
               ),
             ),
-            tint: AppTheme.accentSoft.withOpacity(0.3),
+            tint: AppTheme.accentSoft.withValues(alpha: 0.3),
             child: Row(
               children: [
                 Container(
                   width: 44,
                   height: 44,
                   decoration: BoxDecoration(
-                    color: AppTheme.accent.withOpacity(0.15),
+                    color: AppTheme.accent.withValues(alpha: 0.15),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   alignment: Alignment.center,
@@ -323,7 +323,7 @@ class ProfileScreen extends ConsumerWidget {
                       width: 36,
                       height: 4,
                       decoration: BoxDecoration(
-                        color: AppTheme.textTertiary.withOpacity(0.3),
+                        color: AppTheme.textTertiary.withValues(alpha: 0.3),
                         borderRadius: BorderRadius.circular(2),
                       ),
                     ),
