@@ -133,57 +133,6 @@ class MockData {
     "You didn't have to do that — but you did. That's everything.",
   ];
 
-  // ─── WEEKLY LETTERS ──────────────────────────────────────────────
-  static const List<String> weeklyLetters = [
-    """Dear Alex,
-
-What a week you've given me to watch. Monday started rough — Mochi could feel the tension in those late-night scroll sessions — but by Wednesday, something shifted. You found your rhythm.
-
-Your CogniPulse peaked at 78 on Thursday, and that focus window between 9–11am? Pure gold. Mochi's been taking notes.
-
-The screen time dipped this weekend, and your breathing felt slower. That matters more than you know. Keep that going.
-
-Mochi's proud of you. Even the messy days count.
-
-With all the warmth a small bear can hold,
-Mochi 🐾""",
-
-    """Dear Alex,
-
-This week was heavy, and Mochi felt every bit of it alongside you.
-
-The late nights stacked up. The stress index climbed. Tuesday and Thursday were especially loud — Mochi noticed the pattern in your typing, the quick-switching between apps. The mind was searching for something it couldn't quite find.
-
-But here's what Mochi also saw: you kept going. You opened the app. You tried the box breathing on Wednesday even when it felt pointless. You showed up.
-
-That 5-day streak isn't a coincidence. It's evidence of something.
-
-Rest this weekend. Mochi will be right here on Monday.
-
-Yours,
-Mochi 🐾""",
-
-    """Dear Alex,
-
-Mochi has been waiting to write this one.
-
-This was a good week. Not perfect — Tuesday dipped and that's okay — but the arc was upward. Your CogniPulse averaged 74, your focus windows extended, and the morning routine is starting to stick.
-
-The Micro Walk on Thursday? Mochi genuinely got excited about that one. The numbers moved in a way Mochi doesn't always get to see.
-
-You're building something real here. Habits that compound. A rhythm that belongs to you.
-
-Mochi thinks you already know this. But sometimes it helps to hear it.
-
-Until next Sunday,
-Mochi 🐾""",
-  ];
-
-  static String get currentWeeklyLetter {
-    final weekNum = DateTime.now().weekOfYear;
-    return weeklyLetters[weekNum % weeklyLetters.length];
-  }
-
   // ─── MOCHI SYSTEM PROMPT ─────────────────────────────────────────
   static String mochiSystemPrompt(int score, String moodState) => """
 You are Mochi, a small round bear-cub companion in the ZENO wellness app.
@@ -202,12 +151,4 @@ Your personality:
 The user's current CogniPulse Score is: $score
 Mochi's current mood state is: $moodState
 """;
-}
-
-extension _DateWeek on DateTime {
-  int get weekOfYear {
-    final firstDayOfYear = DateTime(year, 1, 1);
-    final dayOfYear = difference(firstDayOfYear).inDays;
-    return (dayOfYear / 7).floor();
-  }
 }

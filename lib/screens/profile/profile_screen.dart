@@ -2,8 +2,8 @@ import 'dart:ui';
 import 'package:flutter/material.dart' hide Badge;
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:zeno/mock_data.dart';
 import 'package:zeno/providers/app_state_provider.dart';
+import 'package:zeno/services/weekly_letter.dart';
 import 'package:zeno/theme/app_theme.dart';
 import 'package:zeno/widgets/glass_card.dart';
 import 'package:zeno/widgets/mochi_widget.dart';
@@ -163,6 +163,16 @@ class ProfileScreen extends ConsumerWidget {
                         ),
                       ),
                     ),
+                    if (!badge.unlocked) ...[
+                      const SizedBox(width: 6),
+                      Text(
+                        '${badge.current}/${badge.target}',
+                        style: AppTheme.caption.copyWith(
+                          color: AppTheme.primaryLight,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
                   ],
                 ),
               ).animate().fadeIn(duration: 400.ms, delay: (400 + idx * 60).ms);
@@ -173,7 +183,16 @@ class ProfileScreen extends ConsumerWidget {
 
           // ── Weekly Letter ───────────────────────────────────────
           GlassCard(
-            onTap: () => _showWeeklyLetter(context),
+            onTap: () => _showWeeklyLetter(
+              context,
+              WeeklyLetter.write(
+                name: user.name,
+                signals: state.signals,
+                baseline: state.baseline,
+                xpEvents: state.xpEvents,
+                now: state.asOf,
+              ),
+            ),
             tint: AppTheme.accentSoft.withOpacity(0.3),
             child: Row(
               children: [
@@ -233,7 +252,7 @@ class ProfileScreen extends ConsumerWidget {
     );
   }
 
-  void _showWeeklyLetter(BuildContext context) {
+  void _showWeeklyLetter(BuildContext context, String letter) {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -271,7 +290,7 @@ class ProfileScreen extends ConsumerWidget {
                   Text('Mochi\'s Letter', style: AppTheme.displaySmall),
                   const SizedBox(height: AppTheme.lg),
                   Text(
-                    MockData.currentWeeklyLetter,
+                    letter,
                     style: AppTheme.bodyLarge.copyWith(height: 1.7),
                   ),
                 ],
