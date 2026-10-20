@@ -76,4 +76,17 @@ void main() {
     await scrollTo(tester, find.text('Bubble Drift'));
     await scrollTo(tester, find.text('Mood check-in').last);
   });
+
+  testWidgets('demo games are listed under their real names', (tester) async {
+    await pumpInsights(tester, [
+      SignalReading(
+        type: SignalType.game,
+        score: 70,
+        at: DateTime(2026, 10, 15, 13),
+        note: 'demo:wave_sync',
+      ),
+    ]);
+    await scrollTo(tester, find.text('Wave Sync'));
+  });
 }
+

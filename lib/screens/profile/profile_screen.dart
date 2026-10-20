@@ -5,12 +5,14 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:zeno/providers/app_state_provider.dart';
+import 'package:zeno/screens/developer/developer_panel.dart';
 import 'package:zeno/services/weekly_letter.dart';
 import 'package:zeno/theme/app_theme.dart';
 import 'package:zeno/widgets/about_zeno_sheet.dart';
 import 'package:zeno/widgets/edit_name_dialog.dart';
 import 'package:zeno/widgets/glass_card.dart';
 import 'package:zeno/widgets/mochi_widget.dart';
+import 'package:zeno/widgets/reset_data_dialog.dart';
 
 class ProfileScreen extends ConsumerWidget {
   const ProfileScreen({super.key});
@@ -35,7 +37,11 @@ class ProfileScreen extends ConsumerWidget {
           Center(
             child: Column(
               children: [
-                const MochiWidget(size: 100, interactive: false),
+                // Long-press Mochi for the hidden developer tools.
+                GestureDetector(
+                  onLongPress: () => _openDeveloperPanel(context),
+                  child: const MochiWidget(size: 100, interactive: false),
+                ),
                 const SizedBox(height: AppTheme.md),
                 GestureDetector(
                   onTap: () => _editName(context, ref),
@@ -275,40 +281,17 @@ class ProfileScreen extends ConsumerWidget {
   }
 
   Future<void> _confirmReset(BuildContext context, WidgetRef ref) async {
-    HapticFeedback.lightImpact();
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (dialogContext) => AlertDialog(
-        backgroundColor: AppTheme.bgElevated,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(AppTheme.cardRadius),
-        ),
-        title: Text('Reset everything?', style: AppTheme.headlineMed),
-        content: Text(
-          'This deletes your check-ins, scans, games, XP, badges and name '
-          'from this phone, then starts onboarding again. It cannot be undone.',
-          style: AppTheme.bodyMedium,
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(dialogContext).pop(false),
-            child: const Text('Cancel'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.of(dialogContext).pop(true),
-            style: TextButton.styleFrom(foregroundColor: AppTheme.error),
-            child: const Text('Reset'),
-          ),
-        ],
-      ),
-    );
-    if (confirmed != true || !context.mounted) {
-      return;
-    }
-    await ref.read(appStateProvider.notifier).resetAllData();
-    if (context.mounted) {
+    final reset = await confirmAndResetAllData(context, ref);
+    if (reset && context.mounted) {
       context.go('/onboarding');
     }
+  }
+
+  void _openDeveloperPanel(BuildContext context) {
+    HapticFeedback.mediumImpact();
+    Navigator.of(context, rootNavigator: true).push(
+      MaterialPageRoute<void>(builder: (_) => const DeveloperPanel()),
+    );
   }
 
   void _showWeeklyLetter(BuildContext context, String letter) {

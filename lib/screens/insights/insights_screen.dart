@@ -20,8 +20,9 @@ String _dayAndTime(DateTime at) =>
     '${_shortDay(at)} ${at.hour.toString().padLeft(2, '0')}:'
     '${at.minute.toString().padLeft(2, '0')}';
 
-/// 'bubble_drift' → 'Bubble Drift'.
-String _gameTitle(String? gameId) {
+/// 'bubble_drift' → 'Bubble Drift'; seeded rows ('demo:bubble_drift') too.
+String _gameTitle(String? note) {
+  final gameId = note?.replaceFirst('demo:', '');
   if (gameId == null || gameId.isEmpty) {
     return 'Game';
   }
