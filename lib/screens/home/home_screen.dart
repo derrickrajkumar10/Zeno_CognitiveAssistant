@@ -133,7 +133,10 @@ class HomeScreen extends ConsumerWidget {
                             style: AppTheme.headlineMed,
                           ),
                           const SizedBox(height: 2),
-                          Row(
+                          Wrap(
+                            spacing: 8,
+                            runSpacing: 4,
+                            crossAxisAlignment: WrapCrossAlignment.center,
                             children: [
                               Text(
                                 personality.mood.label,
@@ -142,10 +145,10 @@ class HomeScreen extends ConsumerWidget {
                                   fontWeight: FontWeight.w600,
                                 ),
                               ),
-                              if (state.scoreDelta != 0) ...[
-                                const SizedBox(width: 8),
+                              if (state.scoreOverride != null)
+                                const _OverrideChip()
+                              else if (state.scoreDelta != 0)
                                 _DeltaChip(delta: state.scoreDelta),
-                              ],
                             ],
                           ),
                           const SizedBox(height: 2),
@@ -343,6 +346,30 @@ class _QuickAction extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+/// Shown while the developer panel pins the score, so a demo never passes
+/// off a made-up number as a measured one.
+class _OverrideChip extends StatelessWidget {
+  const _OverrideChip();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+      decoration: BoxDecoration(
+        color: AppTheme.error.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Text(
+        'Demo override',
+        style: AppTheme.labelSmall.copyWith(
+          color: AppTheme.error,
+          fontWeight: FontWeight.w700,
+        ),
       ),
     );
   }

@@ -10,6 +10,7 @@ import 'package:zeno/models/signal_reading.dart';
 import 'package:zeno/models/user_profile.dart';
 import 'package:zeno/models/xp_event.dart';
 import 'package:zeno/services/cognipulse_engine.dart';
+import 'package:zeno/services/demo_seeder.dart';
 import 'package:zeno/services/face_scan_repository.dart';
 import 'package:zeno/services/game_repository.dart';
 import 'package:zeno/services/game_recommender.dart';
@@ -47,6 +48,10 @@ class AppState {
   final bool isOllamaLive;
   final int dialogueCycleCount;
 
+  /// Demo-only score set from the developer panel. Kept in memory, never
+  /// saved, and labelled wherever the score is shown.
+  final int? scoreOverride;
+
   AppState({
     required this.asOf,
     required this.userName,
@@ -58,6 +63,7 @@ class AppState {
     required this.onboardingComplete,
     required this.isOllamaLive,
     this.dialogueCycleCount = 0,
+    this.scoreOverride,
   });
 
   AppState copyWith({
@@ -71,6 +77,8 @@ class AppState {
     bool? onboardingComplete,
     bool? isOllamaLive,
     int? dialogueCycleCount,
+    int? scoreOverride,
+    bool clearScoreOverride = false,
   }) =>
       AppState(
         asOf: asOf ?? this.asOf,
@@ -83,13 +91,15 @@ class AppState {
         onboardingComplete: onboardingComplete ?? this.onboardingComplete,
         isOllamaLive: isOllamaLive ?? this.isOllamaLive,
         dialogueCycleCount: dialogueCycleCount ?? this.dialogueCycleCount,
+        scoreOverride:
+            clearScoreOverride ? null : scoreOverride ?? this.scoreOverride,
       );
 
   // ── CogniPulse ──────────────────────────────────────────────────
   late final CogniPulseBreakdown breakdown =
       CogniPulseEngine.today(signals, baseline, asOf);
 
-  int get cogniPulseScore => breakdown.score;
+  int get cogniPulseScore => scoreOverride ?? breakdown.score;
 
   late final List<DaySummary> weekDays =
       CogniPulseEngine.lastDays(signals, baseline, asOf);
@@ -258,6 +268,31 @@ class AppStateNotifier extends StateNotifier<AppState> {
     await _prefs.remove('onboarding_complete');
     await _clearGameData();
     state = _load(_prefs, _clock);
+  }
+
+  /// Developer panel: pin the displayed score (clamped to 0–100), or pass
+  /// null to go back to the real one.
+  void setScoreOverride(int? value) {
+    state = value == null
+        ? state.copyWith(clearScoreOverride: true)
+        : state.copyWith(scoreOverride: value.clamp(0, 100));
+  }
+
+  /// Developer panel: replace any earlier demo rows with a fresh demo week.
+  Future<void> seedDemoWeek() async {
+    final now = _clock();
+    final demo = DemoSeeder.week(now);
+    final signals = [
+      ...state.signals.where((s) => !DemoSeeder.isDemoSignal(s)),
+      ...demo.signals,
+    ]..sort((a, b) => a.at.compareTo(b.at));
+    final events = [
+      ...state.xpEvents.where((e) => !DemoSeeder.isDemoXp(e)),
+      ...demo.xpEvents,
+    ]..sort((a, b) => a.at.compareTo(b.at));
+    state = state.copyWith(asOf: now, signals: signals, xpEvents: events);
+    await _repo.saveSignals(signals);
+    await _repo.saveXpEvents(events);
   }
 
   /// Re-derives everything for the current time, e.g. after midnight.

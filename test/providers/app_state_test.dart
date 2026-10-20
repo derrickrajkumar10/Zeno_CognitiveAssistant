@@ -167,5 +167,36 @@ void main() {
     expect(prefs.getBool('onboarding_complete'), isNull);
     expect(prefs.getString('zeno.ollama_host'), 'http://192.168.1.5:11434');
   });
+
+  test('seeding the demo week twice keeps one copy and the real check-ins',
+      () async {
+    final app = notifier();
+    await app.logMood(70);
+    await app.seedDemoWeek();
+    final once = app.state.signals.length;
+    await app.seedDemoWeek();
+
+    expect(app.state.signals.length, once);
+    expect(app.state.signals.where((s) => s.note == null), hasLength(1));
+    expect(notifier().state.signals.length, once);
+    expect(app.state.weekDays.where((d) => d.hasData), hasLength(7));
+  });
+
+  test('a score override wins over check-ins until cleared, and never persists',
+      () async {
+    final app = notifier();
+    final real = app.state.cogniPulseScore;
+    app.setScoreOverride(150);
+    expect(app.state.cogniPulseScore, 100);
+    app.setScoreOverride(20);
+    await app.logMood(90);
+    expect(app.state.cogniPulseScore, 20);
+    expect(app.state.breakdown.score, isNot(20));
+
+    expect(notifier().state.scoreOverride, isNull);
+    app.setScoreOverride(null);
+    expect(app.state.cogniPulseScore, app.state.breakdown.score);
+    expect(app.state.cogniPulseScore, isNot(real));
+  });
 }
 

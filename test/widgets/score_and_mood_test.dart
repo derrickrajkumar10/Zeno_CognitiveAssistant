@@ -52,4 +52,14 @@ void main() {
     expect(find.text('Not measured in this build'), findsOneWidget);
     expect(find.textContaining('(90 × 0.15 + 60 × 0.10) ÷ 0.25 = 78'), findsOneWidget);
   });
+
+  testWidgets('the breakdown says when a demo override is hiding the real score',
+      (tester) async {
+    final container = await _pump(tester, const ScoreBreakdownSheet());
+    container.read(appStateProvider.notifier).setScoreOverride(95);
+    await tester.pump();
+
+    expect(find.text('A demo override is active (real score: 60).'), findsOneWidget);
+  });
 }
+

@@ -45,6 +45,7 @@ class ScoreBreakdownSheet extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final breakdown = ref.watch(appStateProvider.select((s) => s.breakdown));
+    final scoreOverride = ref.watch(appStateProvider.select((s) => s.scoreOverride));
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(AppTheme.lg, AppTheme.md, AppTheme.lg, AppTheme.xl),
@@ -63,6 +64,16 @@ class ScoreBreakdownSheet extends ConsumerWidget {
           ),
           const SizedBox(height: AppTheme.lg),
           Text('Why is my score ${breakdown.score}?', style: AppTheme.displaySmall),
+          if (scoreOverride != null) ...[
+            const SizedBox(height: AppTheme.sm),
+            Text(
+              'A demo override is active (real score: ${breakdown.score}).',
+              style: AppTheme.bodyMedium.copyWith(
+                color: AppTheme.error,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
           const SizedBox(height: AppTheme.sm),
           Text(
             breakdown.hasCheckInToday
