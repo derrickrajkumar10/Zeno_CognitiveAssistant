@@ -20,6 +20,17 @@ extension MochiMoodStateX on MochiMoodState {
     }
   }
 
+  /// One full breath (in and out) of Mochi's idle loop: quick and bouncy
+  /// when thriving, slow and heavy when struggling.
+  Duration get breathPeriod {
+    switch (this) {
+      case MochiMoodState.thriving:   return const Duration(milliseconds: 1800);
+      case MochiMoodState.balanced:   return const Duration(milliseconds: 2500);
+      case MochiMoodState.drifting:   return const Duration(milliseconds: 3400);
+      case MochiMoodState.struggling: return const Duration(milliseconds: 4500);
+    }
+  }
+
   Color get bodyColor {
     switch (this) {
       case MochiMoodState.thriving:   return AppTheme.mochiThriving;
