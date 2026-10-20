@@ -4,6 +4,7 @@ import 'package:zeno/models/baseline.dart';
 import 'package:zeno/models/quest.dart';
 import 'package:zeno/models/signal_reading.dart';
 import 'package:zeno/providers/app_state_provider.dart';
+import 'package:zeno/services/face_scan_repository.dart';
 
 void main() {
   late SharedPreferences prefs;
@@ -101,5 +102,13 @@ void main() {
   test('the user name persists', () async {
     await notifier().updateUserName('Sam');
     expect(notifier().state.user.name, 'Sam');
+  });
+
+  test('corrupt face scan history starts the app with no scans', () async {
+    await prefs.setString(FaceScanRepository.storageKey, '{not json');
+    expect(notifier().state.faceScans, isEmpty);
+
+    await prefs.setString(FaceScanRepository.storageKey, '[{"id": 7}]');
+    expect(notifier().state.faceScans, isEmpty);
   });
 }
