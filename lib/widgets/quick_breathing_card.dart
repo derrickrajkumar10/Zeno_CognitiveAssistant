@@ -1,76 +1,114 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:zeno/providers/app_state_provider.dart';
 import 'package:zeno/theme/app_theme.dart';
 import 'package:zeno/widgets/glass_card.dart';
 
-class QuickBreathingCard extends StatefulWidget {
-  const QuickBreathingCard({super.key});
+/// Box breathing: inhale, hold, exhale, hold — one phase per [phaseDuration],
+/// four phases per round. A session that runs all [rounds] is counted in app
+/// state and reported through [onComplete]; stopping early counts nothing.
+class QuickBreathingCard extends ConsumerStatefulWidget {
+  final int rounds;
+  final Duration phaseDuration;
+  final VoidCallback? onComplete;
+
+  const QuickBreathingCard({
+    super.key,
+    this.rounds = 4,
+    this.phaseDuration = const Duration(seconds: 4),
+    this.onComplete,
+  });
 
   @override
-  State<QuickBreathingCard> createState() => _QuickBreathingCardState();
+  ConsumerState<QuickBreathingCard> createState() => _QuickBreathingCardState();
 }
 
-class _QuickBreathingCardState extends State<QuickBreathingCard>
+class _QuickBreathingCardState extends ConsumerState<QuickBreathingCard>
     with SingleTickerProviderStateMixin {
-  bool _isActive = false;
+  static const _phases = ['Inhale', 'Hold', 'Exhale', 'Hold'];
+
   late final AnimationController _controller;
-  String _phase = 'Inhale';
+  Timer? _timer;
+  bool _isActive = false;
+  bool _finished = false;
+  int _step = 0;
+
+  int get _totalSteps => widget.rounds * _phases.length;
+  String get _phase => _phases[_step % _phases.length];
+  int get _round => _step ~/ _phases.length + 1;
 
   @override
   void initState() {
     super.initState();
     _controller = AnimationController(
       vsync: this,
-      duration: const Duration(seconds: 4), // 4 seconds per phase
+      duration: widget.phaseDuration,
     );
-
-    _controller.addStatusListener((status) {
-      if (status == AnimationStatus.completed) {
-        setState(() {
-          if (_phase == 'Inhale') {
-            _phase = 'Hold';
-          } else if (_phase == 'Hold' && _controller.value == 1.0) {
-            _phase = 'Exhale';
-            _controller.reverse();
-          } // Wait, this logic needs tweaking
-        });
-      }
-    });
   }
 
-  void _startBreathing() async {
-    setState(() => _isActive = true);
-    // Simple 4-7-8 or Box breathing cycle logic
-    while (_isActive && mounted) {
-      if (!mounted) break;
-      setState(() => _phase = 'Inhale');
-      await _controller.forward(from: 0.0);
-      if (!mounted) break;
+  void _startBreathing() {
+    HapticFeedback.lightImpact();
+    setState(() {
+      _isActive = true;
+      _finished = false;
+      _step = 0;
+    });
+    _animatePhase();
+    _timer?.cancel();
+    _timer = Timer.periodic(widget.phaseDuration, (_) => _nextPhase());
+  }
 
-      setState(() => _phase = 'Hold');
-      await Future.delayed(const Duration(seconds: 4));
-      if (!mounted) break;
+  void _nextPhase() {
+    if (!mounted) {
+      return;
+    }
+    if (_step + 1 >= _totalSteps) {
+      _finish();
+      return;
+    }
+    setState(() => _step++);
+    _animatePhase();
+  }
 
-      setState(() => _phase = 'Exhale');
-      await _controller.reverse(from: 1.0);
-      if (!mounted) break;
-
-      setState(() => _phase = 'Hold');
-      await Future.delayed(const Duration(seconds: 4));
+  void _animatePhase() {
+    switch (_step % _phases.length) {
+      case 0:
+        _controller.forward(from: 0.0);
+      case 2:
+        _controller.reverse(from: 1.0);
     }
   }
 
-  void _stopBreathing() {
+  void _finish() {
+    _timer?.cancel();
+    _controller.value = 0.0;
+    HapticFeedback.lightImpact();
     setState(() {
       _isActive = false;
-      _phase = 'Inhale';
+      _finished = true;
+      _step = 0;
     });
+    ref.read(appStateProvider.notifier).recordBreathingSession();
+    widget.onComplete?.call();
+  }
+
+  void _stopBreathing() {
+    _timer?.cancel();
     _controller.stop();
     _controller.value = 0.0;
+    setState(() {
+      _isActive = false;
+      _step = 0;
+    });
   }
 
   @override
   void dispose() {
+    _timer?.cancel();
     _controller.dispose();
     super.dispose();
   }
@@ -105,8 +143,16 @@ class _QuickBreathingCardState extends State<QuickBreathingCard>
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('Take a moment', style: AppTheme.headlineMed),
-              Text('1-minute box breathing', style: AppTheme.bodySmall),
+              Text(
+                _finished ? 'Nice work' : 'Take a moment',
+                style: AppTheme.headlineMed,
+              ),
+              Text(
+                _finished
+                    ? '${widget.rounds} rounds done. Mochi breathed with you.'
+                    : '${widget.rounds} rounds of box breathing',
+                style: AppTheme.bodySmall,
+              ),
             ],
           ),
         ),
@@ -120,7 +166,7 @@ class _QuickBreathingCardState extends State<QuickBreathingCard>
             shape:
                 RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
           ),
-          child: const Text('Start'),
+          child: Text(_finished ? 'Again' : 'Start'),
         ),
       ],
     );
@@ -147,7 +193,6 @@ class _QuickBreathingCardState extends State<QuickBreathingCard>
             child: AnimatedBuilder(
               animation: _controller,
               builder: (context, child) {
-                // Scale from 0.5 to 1.0 based on controller value
                 final scale = 0.6 + (_controller.value * 0.4);
                 return Transform.scale(
                   scale: scale,
@@ -178,7 +223,7 @@ class _QuickBreathingCardState extends State<QuickBreathingCard>
         ),
         const SizedBox(height: AppTheme.lg),
         Text(
-          'Follow the animation',
+          'Round $_round of ${widget.rounds}',
           style: AppTheme.bodySmall.copyWith(color: AppTheme.textSecondary),
         ),
       ],

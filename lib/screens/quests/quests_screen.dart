@@ -4,10 +4,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:zeno/providers/app_state_provider.dart';
 import 'package:zeno/screens/games/focus_flicker_game.dart';
 import 'package:zeno/screens/games/memory_garden_game.dart';
-import 'package:zeno/screens/games/wave_sync_game.dart';
 import 'package:zeno/theme/app_theme.dart';
 import 'package:zeno/widgets/glass_card.dart';
 import 'package:zeno/widgets/mochi_notification_banner.dart';
+import 'package:zeno/widgets/quick_breathing_card.dart';
 import 'package:zeno/widgets/quest_card.dart';
 
 class QuestsScreen extends ConsumerStatefulWidget {
@@ -21,12 +21,52 @@ class _QuestsScreenState extends ConsumerState<QuestsScreen> {
   final _bannerKey = GlobalKey<MochiNotificationBannerState>();
 
   static const _gameQuestMap = {
-    'breathing': WaveSyncGame(),
     'focus_quest': FocusFlickerGame(),
     'memory_quest': MemoryGardenGame(),
   };
 
+  Future<void> _openBreathingQuest() async {
+    final completed = await showModalBottomSheet<bool>(
+      context: context,
+      useRootNavigator: true,
+      backgroundColor: Colors.transparent,
+      builder: (sheetContext) => Padding(
+        padding: EdgeInsets.fromLTRB(
+          AppTheme.lg,
+          AppTheme.lg,
+          AppTheme.lg,
+          MediaQuery.of(sheetContext).padding.bottom + AppTheme.lg,
+        ),
+        child: QuickBreathingCard(
+          onComplete: () {
+            // Leave "Nice work" on screen for a moment before closing.
+            Future.delayed(const Duration(milliseconds: 1200), () {
+              if (sheetContext.mounted) {
+                Navigator.of(sheetContext).pop(true);
+              }
+            });
+          },
+        ),
+      ),
+    );
+    if (!mounted) {
+      return;
+    }
+    if (completed != true) {
+      _bannerKey.currentState?.show(
+        'Mochi kept the quest open. Finish all four rounds to claim the XP.',
+      );
+      return;
+    }
+    await ref.read(appStateProvider.notifier).completeQuest('breathing');
+    _bannerKey.currentState?.show("Box Breathing done. Mochi feels calmer too 🌱");
+  }
+
   void _handleQuestComplete(String questId) {
+    if (questId == 'breathing') {
+      _openBreathingQuest();
+      return;
+    }
     final game = _gameQuestMap[questId];
     if (game != null) {
       Navigator.of(context, rootNavigator: true)
