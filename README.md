@@ -68,7 +68,7 @@ Long-press Mochi on the Profile tab. From there you can:
 ```bash
 flutter analyze --fatal-infos               # 0 issues
 flutter test --coverage                     # 156 tests
-dart run tool/coverage_summary.dart --files # 80.8% line coverage
+dart run tool/coverage_summary.dart --files # about 80% line coverage (the games are random, so it moves by about 1%)
 ```
 
 GitHub Actions runs the same three steps on every push and pull request, fails below 75% coverage, and builds a debug APK (`.github/workflows/ci.yml`).

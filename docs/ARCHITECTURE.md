@@ -148,7 +148,7 @@ Corrupt JSON loads as empty rather than crashing. "Reset all data" removes every
 
 ## Testing
 
-`flutter test` runs 156 tests: unit tests for every engine and repository, and widget tests for each screen's key flows (onboarding to home, mood tap moving the score, typing check-in, breathing quest, game end to results, every game opening on a phone-sized screen, developer panel, reset). Line coverage is about 81% (`dart run tool/coverage_summary.dart`). The camera-driven parts of the Scan screen can't run under `flutter test`, so they're covered by the analyzer tests plus a manual check on a phone.
+`flutter test` runs 156 tests: unit tests for every engine and repository, and widget tests for each screen's key flows (onboarding to home, mood tap moving the score, typing check-in, breathing quest, game end to results, every game opening on a phone-sized screen, developer panel, reset). Line coverage is about 80% (it moves by about a point between runs because the games spawn targets at random) (`dart run tool/coverage_summary.dart`). The camera-driven parts of the Scan screen can't run under `flutter test`, so they're covered by the analyzer tests plus a manual check on a phone.
 
 Test conventions:
 
